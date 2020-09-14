@@ -1,0 +1,428 @@
+---
+title: "Creative Assignment One"
+author: "Whytne Stevens"
+date: "9/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Creative Assignment 1
+Currently playing around with different visualizations to see which ones could be interesting
+```{r load libraries}
+library(ggplot2)
+library(tidycensus)
+library(tidyverse)
+```
+
+
+
+
+```{r load person-level microdata variables}
+person_vars_2018 <- pums_variables %>%
+  distinct(year, survey, var_code, 
+           var_label, data_type, level) %>%
+  filter(level == "person", year == 2018, survey == "acs1")
+```
+
+
+
+
+```{r load ACS area variables}
+area_vars_2018 <- load_variables(2018, "acs1")
+```
+
+
+
+
+```{r message=FALSE, results='hide'}
+dallas_county <- c("02301", "02302", "02303", "02304", "02308", "02317", "02318", "02319", "02320", "02321", "02322")
+```
+
+
+
+
+```{r load person-level data, results= 'hide'}
+person_data <- get_pums(variables = c("PUMA",
+                                      "RAC1P",
+                                      "SEX",
+                                      "SOCP",
+                                      "LANX",
+                                      "ENG", 
+                                      "PINCP", 
+                                      "WKHP", 
+                                      "POVPIP"),
+                        state = "TX",
+                        year = 2018, 
+                        survey = "acs1",
+                        recode = TRUE) %>% 
+  mutate(SOCP = as.numeric(SOCP)) %>% 
+  filter(PUMA == dallas_county,
+         PINCP > 0,
+         SOCP > 0,
+         WKHP > 0,
+         POVPIP > 0) %>%
+  select(RAC1P_label, SEX_label, SOCP_label, ENG_label, LANX_label, PINCP, WKHP, POVPIP)
+```
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = POVPIP,
+           y = PINCP,
+           color = ENG_label)) +
+  geom_point() +
+  scale_x_continuous(name = "Income-to-poverty ratio",
+                     breaks = seq(0, 500, by = 50),
+                     labels = paste(seq(0, 500, by = 50), "", sep = "")) +
+  scale_y_continuous(name = "Total person's income",
+                     breaks = seq(200, 500000, by = 50000)) +
+  scale_color_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_bw() 
+```
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = PINCP,
+           y = POVPIP,
+           color = ENG_label)) +
+  geom_point() +
+  scale_x_continuous(name = "Total person's income",
+                     breaks = seq(200, 500000, by = 50000,
+                     labels = paste(seq(200, 500000, by = 50000), "$", sep = "")) +
+  scale_y_continuous(name = "Income-to-poverty ratio",
+                     breaks = seq(0, 500, by = 50))) +
+  scale_color_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_bw() 
+```
+
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = WKHP,
+           y = PINCP,
+           color = ENG_label)) +
+  geom_point() +
+  scale_x_continuous(name = "Hours worked per week",
+                     breaks = seq(0, 100, by = 10),
+                     labels = paste(seq(0, 100, by = 10), "", sep = "")) +
+  scale_y_continuous(name = "Total person's income",
+                     breaks = seq(200, 500000, by = 50000)) +
+  scale_color_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_bw() 
+```
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = WKHP,
+           y = PINCP,
+           color = ENG_label,
+           fill = ENG_label)) +
+  geom_point() +
+  stat_smooth(method = "lm") +
+  scale_x_continuous(name = "Hours worked per week",
+                     breaks = seq(0, 100, by = 10),
+                     labels = paste(seq(0, 100, by = 10), "", sep = "")) +
+  scale_y_continuous(name = "Total person's income",
+                     breaks = seq(200, 500000, by = 50000)) +
+  scale_color_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_fill_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_bw() 
+```
+
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = WKHP,
+           y = POVPIP,
+           color = ENG_label)) +
+  geom_point() +
+  scale_x_continuous(name = "Hours worked per week",
+                     breaks = seq(0, 100, by = 10),
+                     labels = paste(seq(0, 100, by = 10), "", sep = "")) +
+  scale_y_continuous(name = "Income-to-poverty ratio",
+                     breaks = seq(0, 500, by = 50)) +
+  scale_color_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_bw() 
+```
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = POVPIP,
+           y = PINCP,
+           color = ENG_label,
+           fill = ENG_label)) +
+  geom_point() +
+  stat_smooth(method = "lm") +
+  scale_x_continuous(name = "Income-to-poverty ratio",
+                     breaks = seq(0, 500, by = 50),
+                     labels = paste(seq(0, 500, by = 50), "", sep = "")) +
+  scale_y_continuous(name = "Total person's income",
+                     breaks = seq(200, 500000, by = 50000)) +
+  scale_color_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_fill_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_bw() 
+```
+
+
+```{r}
+ggplot(person_data, aes(x = RAC1P_label, fill = ENG_label)) +
+  geom_bar() +
+  scale_y_continuous(name = "English language ability/proficiency") +
+  scale_x_discrete(name = "Race",
+                       labels = c("White \n alone",
+                                  "Black \n alone",
+                                  "American Indian\n alone",
+                                  "American Indian and Alaska Native tribes specified;\n or American Indian or Alaska Native,\n not specified and no other races",
+                                  "Asian \n alone",
+                                  "Two or \n More Races",
+                                  "Some Other\n Race alone")) +
+  scale_fill_discrete(name = element_blank(),
+                        labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_bw() 
+
+```
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = PINCP,
+           y = POVPIP)) +
+  geom_point() +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Total person's income") +
+  scale_y_continuous(name = "Income-to-poverty ratio") +
+  theme_bw() 
+```
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = POVPIP,
+           y = PINCP)) +
+  geom_point() +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Income-to-poverty ratio") +
+  scale_y_continuous(name = "Total person's income") +
+  theme_bw() 
+```
+
+```{r}
+ggplot(person_data, 
+       aes(x = WKHP,
+           y = PINCP)) +
+  geom_point() +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Hours worked per week") +
+  scale_y_continuous(name = "Total person's income") +
+  theme_bw() 
+```
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = PINCP,
+           y = WKHP)) +
+  geom_point() +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Total person's income") +
+  scale_y_continuous(name = "Hours worked per week") +
+  theme_bw() 
+```
+
+
+
+```{r}
+ggplot(SD_tracts, 
+       aes(x = avg_hh_size,
+           y = tot_pop)) +
+  geom_point(alpha = 0.5, size = 0.5) +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Average household size",
+                     labels = c("5 or 1", "1.5", "2", "2.5",
+                                "3", "3.5", "4", "4.5", "5"),
+                     breaks = seq(1, 5, by = 0.5)) +
+  scale_y_continuous(name = "Tract population",
+                     trans = "log",
+                     breaks = c(10, 100, 1000, 10000),
+                     labels = c("10", "100", "1,000", "10,000")) +
+  coord_polar(theta = "x") +
+  theme_bw() 
+```
+
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = ENG_label,
+           y = PINCP)) +
+  geom_point() +
+  scale_x_discrete(name = "English language ability/proficiency",
+                        labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_y_continuous(name = "Total person's income",
+                     breaks = seq(200, 500000, by = 50000)) +
+  theme_bw()
+```
+
+
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = ENG_label,
+           y = POVPIP)) +
+  geom_point() +
+  scale_x_discrete(name = "English language ability/proficiency",
+                        labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_y_continuous (name = "Income-to-poverty ratio",
+                     breaks = seq(0, 500, by = 50)) +
+  theme_bw()
+```
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = ENG_label,
+           y = PINCP,
+           color = ENG_label)) +
+  geom_violin() +
+  geom_point(position = "jitter",
+             alpha = 0.5,
+             size = 0.5) +
+  scale_x_discrete(name = "English language ability/proficiency",
+                        labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_y_continuous(name = "Total person's income",
+                     breaks = seq(1000, 500000, by = 50000)) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = ENG_label,
+           y = POVPIP,
+           color = ENG_label)) +
+  geom_violin() +
+  geom_point(position = "jitter",
+             alpha = 0.5,
+             size = 0.5) +
+  scale_x_discrete(name = "English language ability/proficiency",
+                        labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_y_continuous(name = "Income-to-poverty ratio",
+                     breaks = seq(0, 500, by = 50)) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
