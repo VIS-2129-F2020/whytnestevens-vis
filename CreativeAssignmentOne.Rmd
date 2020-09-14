@@ -283,23 +283,6 @@ ggplot(person_data,
 
 
 
-```{r}
-ggplot(SD_tracts, 
-       aes(x = avg_hh_size,
-           y = tot_pop)) +
-  geom_point(alpha = 0.5, size = 0.5) +
-  stat_smooth(color = "black", linetype = 2, size = 0.5) +
-  scale_x_continuous(name = "Average household size",
-                     labels = c("5 or 1", "1.5", "2", "2.5",
-                                "3", "3.5", "4", "4.5", "5"),
-                     breaks = seq(1, 5, by = 0.5)) +
-  scale_y_continuous(name = "Tract population",
-                     trans = "log",
-                     breaks = c(10, 100, 1000, 10000),
-                     labels = c("10", "100", "1,000", "10,000")) +
-  coord_polar(theta = "x") +
-  theme_bw() 
-```
 
 
 
@@ -384,6 +367,26 @@ ggplot(person_data,
   theme(legend.position = "none")
 ```
 
+```{r}
+ggplot(person_data, 
+       aes(x = ENG_label,
+           y = WKHP,
+           color = ENG_label)) +
+  geom_violin() +
+  geom_point(position = "jitter",
+             alpha = 0.5,
+             size = 0.5) +
+  scale_x_discrete(name = "English language ability/proficiency",
+                        labels = c("N/A (less than 5 years old/\n speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_y_continuous(name = "Hours worked per week",
+                     breaks = seq(1, 100, by = 10)) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
 
 
 
