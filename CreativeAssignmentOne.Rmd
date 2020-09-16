@@ -445,40 +445,6 @@ ggplot(person_data,
 ```
 
 
-Lastly, I tried my hand at some correlograms. To the extent that they worked or were accurate, I am not sure. However, I would like to come back to these types of charts in the future as I think they'd be useful in other data anaylses.
+Lastly, I did try my hand at some correlograms. To the extent that they worked or were accurate, I am not sure. I had some technical errors that prevented me from including them in this assignment. However, I would like to come back to these types of charts in the future as I think they'd be useful in other data anaylses.
 
-
-
-
-```{r}
-ggcorr(person_data2, method = c("everything", "pearson")) 
-```
-
-
-
-```{r}
-data(person_data2)
-corr <- round(cor(person_data2), 1)
-
-# Plot
-ggcorrplot(corr, hc.order = TRUE, 
-           type = "lower", 
-           lab = TRUE, 
-           lab_size = 3, 
-           method="circle", 
-           colors = c("tomato2", "white", "springgreen3"), 
-           title="Correlogram of person_data2", 
-           ggtheme=theme_solarized)
-```
-
-```{r}
-corr <- round(cor(person_data2), 1)
-ggcorrplot(corr, hc.order = TRUE, 
-           type = "upper", 
-           lab = TRUE, 
-           lab_size = 3, 
-           method="square", 
-           colors = c("tomato2", "white", "springgreen3"),
-           ggtheme=theme_solarized)
-```
 
