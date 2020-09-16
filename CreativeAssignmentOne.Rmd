@@ -10,11 +10,24 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Creative Assignment 1
+For this assignment, I am looking at the same question I am looking at for Quant: how one's profession and English language might effect their income and income to poverty ratio. Lik in quant, I am narrowing down my analysis to person level data for Dallas County, Texas  from Public Use Microdata Sample (PUMAs) provided by the 2018 1 year American Community Survey and have selected the following variables to explore this question:
 
+Race (RAC3P) (categorical)
 
+Sex (SEX) (categorical)
 
+Standard Occupational Classification (SOCP) (categorical)
 
-Currently playing around with different visualizations to see which ones could be interesting
+English ability (ENG) (categorical)
+
+Language other than English spoken at home (LANX) (categorical)
+
+Income (PINCP) (continuous)
+
+Work hours per week (WKHP) (continuous)
+
+Income-to-poverty ratio (POVPIP) (continuous)
+
 ```{r load libraries}
 library(ggplot2)
 library(tidycensus)
@@ -82,7 +95,7 @@ ggplot(person_data,
   scale_x_continuous(name = "Income-to-poverty ratio",
                      breaks = seq(0, 500, by = 50),
                      labels = paste(seq(0, 500, by = 50), "", sep = "")) +
-  scale_y_continuous(name = "Total person's income",
+  scale_y_continuous(name = "Total person's income (USD)",
                      breaks = seq(200, 500000, by = 50000)) +
   scale_color_discrete(name = "English language ability/proficiency",
                        labels = c("N/A (less than 5 years old/speaks only English)",
@@ -105,7 +118,7 @@ ggplot(person_data,
   scale_x_continuous(name = "Income-to-poverty ratio",
                      breaks = seq(0, 500, by = 50),
                      labels = paste(seq(0, 500, by = 50), "", sep = "")) +
-  scale_y_continuous(name = "Total person's income",
+  scale_y_continuous(name = "Total person's income (USD)",
                      breaks = seq(200, 500000, by = 50000)) +
   scale_color_discrete(name = "English language ability/proficiency",
                        labels = c("N/A (less than 5 years old/speaks only English)",
@@ -133,7 +146,7 @@ ggplot(person_data,
   scale_x_continuous(name = "Hours worked per week",
                      breaks = seq(0, 100, by = 10),
                      labels = paste(seq(0, 100, by = 10), "", sep = "")) +
-  scale_y_continuous(name = "Total person's income",
+  scale_y_continuous(name = "Total person's income (USD)",
                      breaks = seq(200, 500000, by = 50000)) +
   scale_color_discrete(name = "English language ability/proficiency",
                        labels = c("N/A (less than 5 years old/speaks only English)",
@@ -189,7 +202,7 @@ ggplot(person_data,
   scale_x_continuous(name = "Hours worked per week",
                      breaks = seq(0, 100, by = 10),
                      labels = paste(seq(0, 100, by = 10), "", sep = "")) +
-  scale_y_continuous(name = "Total person's income",
+  scale_y_continuous(name = "Total person's income (USD)",
                      breaks = seq(200, 500000, by = 50000)) +
   scale_color_discrete(name = "English language ability/proficiency",
                        labels = c("N/A (less than 5 years old/speaks only English)",
@@ -208,7 +221,7 @@ ggplot(person_data,
            fill = ENG_label)) +
   geom_point() +
   stat_smooth(method = "lm") +
-    scale_x_continuous(name = "Total person's income",
+    scale_x_continuous(name = "Total person's income (USD)",
                      breaks = seq(200, 500000, by = 50000,
                      labels = paste(seq(200, 500000, by = 50000), "$", sep = "")) +
   scale_y_continuous(name = "Income-to-poverty ratio",
@@ -239,7 +252,7 @@ ggplot(person_data,
   geom_point() +
   stat_smooth(color = "black", linetype = 2, size = 0.5) +
   scale_x_continuous(name = "Income-to-poverty ratio") +
-  scale_y_continuous(name = "Total person's income") +
+  scale_y_continuous(name = "Total person's income (USD)") +
   theme_solarized() 
 ```
 
@@ -250,7 +263,7 @@ ggplot(person_data,
   geom_point() +
   stat_smooth(color = "black", linetype = 2, size = 0.5) +
   scale_x_continuous(name = "Hours worked per week") +
-  scale_y_continuous(name = "Total person's income") +
+  scale_y_continuous(name = "Total person's income (USD)") +
   theme_solarized() 
 ```
 
@@ -323,7 +336,7 @@ ggplot(person_data,
                                   "Well",
                                   "Not well",
                                   "Not at all")) +
-  scale_y_continuous(name = "Total person's income",
+  scale_y_continuous(name = "Total person's income (USD)",
                      breaks = seq(200, 500000, by = 50000)) +
   theme_solarized()
 ```
@@ -362,7 +375,7 @@ ggplot(person_data,
                                   "Well",
                                   "Not well",
                                   "Not at all")) +
- scale_y_continuous(name = "Total person's income",
+ scale_y_continuous(name = "Total person's income (USD)",
                      breaks = seq(1000, 500000, by = 50000))  +
   theme_solarized() +
   theme(legend.position = "none")
