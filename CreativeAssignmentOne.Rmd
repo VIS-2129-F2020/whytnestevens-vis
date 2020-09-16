@@ -9,15 +9,21 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Creative Assignment 1
+# Creative Assignment 1
+
+
+
+
 Currently playing around with different visualizations to see which ones could be interesting
 ```{r load libraries}
 library(ggplot2)
 library(tidycensus)
 library(tidyverse)
+library(ggthemes)
+library(GGally)
+library(ggcorrplot)
+suppressPackageStartupMessages(library(tidyverse))
 ```
-
-
 
 
 ```{r load person-level microdata variables}
@@ -28,20 +34,14 @@ person_vars_2018 <- pums_variables %>%
 ```
 
 
-
-
 ```{r load ACS area variables}
 area_vars_2018 <- load_variables(2018, "acs1")
 ```
 
 
-
-
 ```{r message=FALSE, results='hide'}
 dallas_county <- c("02301", "02302", "02303", "02304", "02308", "02317", "02318", "02319", "02320", "02321", "02322")
 ```
-
-
 
 
 ```{r load person-level data, results= 'hide'}
@@ -68,6 +68,11 @@ person_data <- get_pums(variables = c("PUMA",
 ```
 
 
+
+
+
+## Relationships and Distributions of Continuous Variables
+Here, I began exploring the relationships and distributions between my continuous variables, which were Total person's income (PINCP), hours worked per week (WKHP), and income to poverty ratio (POVPIP). In the charts below, I used scatterplots and sorted most of the variables by English language ability/proficiency
 ```{r}
 ggplot(person_data, 
        aes(x = POVPIP,
@@ -85,17 +90,125 @@ ggplot(person_data,
                                   "Well",
                                   "Not well",
                                   "Not at all")) +
-  theme_bw() 
+  theme_solarized() 
 ```
 
 
 ```{r}
 ggplot(person_data, 
-       aes(x = PINCP,
+       aes(x = POVPIP,
+           y = PINCP,
+           color = ENG_label,
+           fill = ENG_label)) +
+  geom_point() +
+  stat_smooth(method = "lm") +
+  scale_x_continuous(name = "Income-to-poverty ratio",
+                     breaks = seq(0, 500, by = 50),
+                     labels = paste(seq(0, 500, by = 50), "", sep = "")) +
+  scale_y_continuous(name = "Total person's income",
+                     breaks = seq(200, 500000, by = 50000)) +
+  scale_color_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_fill_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_solarized() 
+```
+
+```{r}
+ggplot(person_data, 
+       aes(x = WKHP,
+           y = PINCP,
+           color = ENG_label,
+           fill = ENG_label)) +
+  geom_point() +
+  stat_smooth(method = "lm") +
+  scale_x_continuous(name = "Hours worked per week",
+                     breaks = seq(0, 100, by = 10),
+                     labels = paste(seq(0, 100, by = 10), "", sep = "")) +
+  scale_y_continuous(name = "Total person's income",
+                     breaks = seq(200, 500000, by = 50000)) +
+  scale_color_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_fill_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_solarized() 
+```
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = WKHP,
            y = POVPIP,
+           color = ENG_label,
+           fill = ENG_label)) +
+  geom_point() +
+  stat_smooth(method = "lm") +
+ scale_x_continuous(name = "Hours worked per week",
+                     breaks = seq(0, 100, by = 10),
+                     labels = paste(seq(0, 100, by = 10), "", sep = "")) +
+  scale_y_continuous(name = "Income-to-poverty ratio",
+                     breaks = seq(0, 500, by = 50)) +
+  scale_color_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_fill_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_solarized()
+```
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = WKHP,
+           y = PINCP,
            color = ENG_label)) +
   geom_point() +
-  scale_x_continuous(name = "Total person's income",
+  scale_x_continuous(name = "Hours worked per week",
+                     breaks = seq(0, 100, by = 10),
+                     labels = paste(seq(0, 100, by = 10), "", sep = "")) +
+  scale_y_continuous(name = "Total person's income",
+                     breaks = seq(200, 500000, by = 50000)) +
+  scale_color_discrete(name = "English language ability/proficiency",
+                       labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_solarized() 
+```
+
+```{r}
+ggplot(person_data, 
+       aes(x = PINCP,
+           y = POVPIP,
+           color = ENG_label,
+           fill = ENG_label)) +
+  geom_point() +
+  stat_smooth(method = "lm") +
+    scale_x_continuous(name = "Total person's income",
                      breaks = seq(200, 500000, by = 50000,
                      labels = paste(seq(200, 500000, by = 50000), "$", sep = "")) +
   scale_y_continuous(name = "Income-to-poverty ratio",
@@ -106,146 +219,18 @@ ggplot(person_data,
                                   "Well",
                                   "Not well",
                                   "Not at all")) +
-  theme_bw() 
-```
-
-
-
-```{r}
-ggplot(person_data, 
-       aes(x = WKHP,
-           y = PINCP,
-           color = ENG_label)) +
-  geom_point() +
-  scale_x_continuous(name = "Hours worked per week",
-                     breaks = seq(0, 100, by = 10),
-                     labels = paste(seq(0, 100, by = 10), "", sep = "")) +
-  scale_y_continuous(name = "Total person's income",
-                     breaks = seq(200, 500000, by = 50000)) +
-  scale_color_discrete(name = "English language ability/proficiency",
-                       labels = c("N/A (less than 5 years old/speaks only English)",
-                                  "Very well",
-                                  "Well",
-                                  "Not well",
-                                  "Not at all")) +
-  theme_bw() 
-```
-
-
-```{r}
-ggplot(person_data, 
-       aes(x = WKHP,
-           y = PINCP,
-           color = ENG_label,
-           fill = ENG_label)) +
-  geom_point() +
-  stat_smooth(method = "lm") +
-  scale_x_continuous(name = "Hours worked per week",
-                     breaks = seq(0, 100, by = 10),
-                     labels = paste(seq(0, 100, by = 10), "", sep = "")) +
-  scale_y_continuous(name = "Total person's income",
-                     breaks = seq(200, 500000, by = 50000)) +
-  scale_color_discrete(name = "English language ability/proficiency",
-                       labels = c("N/A (less than 5 years old/speaks only English)",
-                                  "Very well",
-                                  "Well",
-                                  "Not well",
-                                  "Not at all")) +
   scale_fill_discrete(name = "English language ability/proficiency",
                        labels = c("N/A (less than 5 years old/speaks only English)",
                                   "Very well",
                                   "Well",
                                   "Not well",
                                   "Not at all")) +
-  theme_bw() 
+  theme_solarized() 
 ```
 
 
 
-```{r}
-ggplot(person_data, 
-       aes(x = WKHP,
-           y = POVPIP,
-           color = ENG_label)) +
-  geom_point() +
-  scale_x_continuous(name = "Hours worked per week",
-                     breaks = seq(0, 100, by = 10),
-                     labels = paste(seq(0, 100, by = 10), "", sep = "")) +
-  scale_y_continuous(name = "Income-to-poverty ratio",
-                     breaks = seq(0, 500, by = 50)) +
-  scale_color_discrete(name = "English language ability/proficiency",
-                       labels = c("N/A (less than 5 years old/speaks only English)",
-                                  "Very well",
-                                  "Well",
-                                  "Not well",
-                                  "Not at all")) +
-  theme_bw() 
-```
-
-
-```{r}
-ggplot(person_data, 
-       aes(x = POVPIP,
-           y = PINCP,
-           color = ENG_label,
-           fill = ENG_label)) +
-  geom_point() +
-  stat_smooth(method = "lm") +
-  scale_x_continuous(name = "Income-to-poverty ratio",
-                     breaks = seq(0, 500, by = 50),
-                     labels = paste(seq(0, 500, by = 50), "", sep = "")) +
-  scale_y_continuous(name = "Total person's income",
-                     breaks = seq(200, 500000, by = 50000)) +
-  scale_color_discrete(name = "English language ability/proficiency",
-                       labels = c("N/A (less than 5 years old/speaks only English)",
-                                  "Very well",
-                                  "Well",
-                                  "Not well",
-                                  "Not at all")) +
-  scale_fill_discrete(name = "English language ability/proficiency",
-                       labels = c("N/A (less than 5 years old/speaks only English)",
-                                  "Very well",
-                                  "Well",
-                                  "Not well",
-                                  "Not at all")) +
-  theme_bw() 
-```
-
-
-```{r}
-ggplot(person_data, aes(x = RAC1P_label, fill = ENG_label)) +
-  geom_bar() +
-  scale_y_continuous(name = "English language ability/proficiency") +
-  scale_x_discrete(name = "Race",
-                       labels = c("White \n alone",
-                                  "Black \n alone",
-                                  "American Indian\n alone",
-                                  "American Indian and Alaska Native tribes specified;\n or American Indian or Alaska Native,\n not specified and no other races",
-                                  "Asian \n alone",
-                                  "Two or \n More Races",
-                                  "Some Other\n Race alone")) +
-  scale_fill_discrete(name = element_blank(),
-                        labels = c("N/A (less than 5 years old/speaks only English)",
-                                  "Very well",
-                                  "Well",
-                                  "Not well",
-                                  "Not at all")) +
-  theme_bw() 
-
-```
-
-
-```{r}
-ggplot(person_data, 
-       aes(x = PINCP,
-           y = POVPIP)) +
-  geom_point() +
-  stat_smooth(color = "black", linetype = 2, size = 0.5) +
-  scale_x_continuous(name = "Total person's income") +
-  scale_y_continuous(name = "Income-to-poverty ratio") +
-  theme_bw() 
-```
-
+I then began to explore the relationships and distributions between my continuous variables, which were Total person's income (PINCP), hours worked per week (WKHP), and income to poverty ratio (POVPIP), by using scatterplots as well
 
 ```{r}
 ggplot(person_data, 
@@ -255,7 +240,7 @@ ggplot(person_data,
   stat_smooth(color = "black", linetype = 2, size = 0.5) +
   scale_x_continuous(name = "Income-to-poverty ratio") +
   scale_y_continuous(name = "Total person's income") +
-  theme_bw() 
+  theme_solarized() 
 ```
 
 ```{r}
@@ -266,25 +251,66 @@ ggplot(person_data,
   stat_smooth(color = "black", linetype = 2, size = 0.5) +
   scale_x_continuous(name = "Hours worked per week") +
   scale_y_continuous(name = "Total person's income") +
-  theme_bw() 
+  theme_solarized() 
 ```
 
+
+## Relationships and Distributions of Categorical Variables
+Below is a bar chart showing the distributions of English language proficiency by racial groups
+```{r}
+ggplot(person_data, aes(x = RAC1P_label, fill = ENG_label)) +
+  geom_bar() +
+  scale_y_continuous(name = "English language ability/proficiency") +
+  scale_x_discrete(name = "Race",
+                       labels = c("American Indian\n alone",
+                                  "American Indian and Alaska Native tribes specified;\n or American Indian or Alaska Native,\n not specified and no other races",
+                                  "Asian \n alone",
+                                  "Black \n alone",
+                                  "Native Hawaiian and \n Other Pacific Islander alone",
+                                  "Some Other\n Race alone",
+                                  "Two or \n More Races",
+                                  "White \n alone")) +
+  scale_fill_discrete(name = element_blank(),
+                        labels = c("N/A (less than 5 years old/speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  theme_solarized()
+  
+
+```
+
+I also tried using a density plot to further analyze my ENG and LANX variables
 
 ```{r}
-ggplot(person_data, 
-       aes(x = PINCP,
-           y = WKHP)) +
-  geom_point() +
-  stat_smooth(color = "black", linetype = 2, size = 0.5) +
-  scale_x_continuous(name = "Total person's income") +
-  scale_y_continuous(name = "Hours worked per week") +
-  theme_bw() 
+ggplot(person_data, aes(ENG_label))+
+ geom_density(aes(fill=factor(ENG_label)), alpha=0.8) + 
+    labs(title="Density plot", 
+         subtitle="English language skills grouped by proficiency level",
+         caption="Source: 2018 ACS 1 year survey",
+         x="English language proficiency",
+         fill="proficiency level") +
+ theme_solarized()
+```
+
+```{r}
+ggplot(person_data, aes(LANX_label))+
+ geom_density(aes(fill=factor(LANX_label)), alpha=0.8) + 
+    labs(title="Density plot", 
+         subtitle="Language other than English spoken at home",
+         caption="Source: 2018 ACS 1 year survey",
+         x="Language other than English spoken at home",
+         fill="Language other than English spoken at home") +
+ theme_solarized()
 ```
 
 
 
 
 
+## Relationships and Distributions of Categorical and Continuous Variables
+I also tried some violin plots, jitter plots, and box plots to see if an interesting story could be told from the distribution of the data points for my income, income to poverty ratio, and hours worked per week variables in relation to one's English proficiency
 
 ```{r}
 ggplot(person_data, 
@@ -299,16 +325,13 @@ ggplot(person_data,
                                   "Not at all")) +
   scale_y_continuous(name = "Total person's income",
                      breaks = seq(200, 500000, by = 50000)) +
-  theme_bw()
+  theme_solarized()
 ```
-
-
-
 
 ```{r}
 ggplot(person_data, 
        aes(x = ENG_label,
-           y = POVPIP)) +
+           y = WKHP)) +
   geom_point() +
   scale_x_discrete(name = "English language ability/proficiency",
                         labels = c("N/A (less than 5 years old/speaks only English)",
@@ -316,33 +339,34 @@ ggplot(person_data,
                                   "Well",
                                   "Not well",
                                   "Not at all")) +
-  scale_y_continuous (name = "Income-to-poverty ratio",
-                     breaks = seq(0, 500, by = 50)) +
-  theme_bw()
+  scale_y_continuous(name = "Hours worked per week",
+                     breaks = seq(0, 100, by = 10)) +
+  theme_solarized()
 ```
 
+
+
+I also tried some violin plots, jitter plots, and box plots to see if an interesting story could be told from the variables I chose for this section and the distribution of those data points
 
 ```{r}
 ggplot(person_data, 
        aes(x = ENG_label,
            y = PINCP,
            color = ENG_label)) +
-  geom_violin() +
   geom_point(position = "jitter",
-             alpha = 0.5,
-             size = 0.5) +
+             size = 0.5,
+             alpha = 0.5) +
   scale_x_discrete(name = "English language ability/proficiency",
-                        labels = c("N/A (less than 5 years old/speaks only English)",
+                        labels = c("N/A (less than 5 years old/\n speaks only English)",
                                   "Very well",
                                   "Well",
                                   "Not well",
                                   "Not at all")) +
-  scale_y_continuous(name = "Total person's income",
-                     breaks = seq(1000, 500000, by = 50000)) +
-  theme_bw() +
+ scale_y_continuous(name = "Total person's income",
+                     breaks = seq(1000, 500000, by = 50000))  +
+  theme_solarized() +
   theme(legend.position = "none")
 ```
-
 
 
 
@@ -363,19 +387,38 @@ ggplot(person_data,
                                   "Not at all")) +
   scale_y_continuous(name = "Income-to-poverty ratio",
                      breaks = seq(0, 500, by = 50)) +
-  theme_bw() +
+  theme_solarized() +
   theme(legend.position = "none")
 ```
+
+
+
+
+```{r}
+ggplot(person_data, 
+       aes(x = ENG_label,
+           y = POVPIP,
+           color = ENG_label)) +
+  geom_boxplot() +
+  scale_x_discrete(name = "English language ability/proficiency",
+                        labels = c("N/A (less than 5 years old/\n speaks only English)",
+                                  "Very well",
+                                  "Well",
+                                  "Not well",
+                                  "Not at all")) +
+  scale_y_continuous(name = "Income-to-poverty ratio",
+                     breaks = seq(0, 500, by = 50))  +
+  theme_solarized() +
+  theme(legend.position = "none")
+```
+
 
 ```{r}
 ggplot(person_data, 
        aes(x = ENG_label,
            y = WKHP,
            color = ENG_label)) +
-  geom_violin() +
-  geom_point(position = "jitter",
-             alpha = 0.5,
-             size = 0.5) +
+  geom_boxplot() +
   scale_x_discrete(name = "English language ability/proficiency",
                         labels = c("N/A (less than 5 years old/\n speaks only English)",
                                   "Very well",
@@ -384,48 +427,45 @@ ggplot(person_data,
                                   "Not at all")) +
   scale_y_continuous(name = "Hours worked per week",
                      breaks = seq(1, 100, by = 10)) +
-  theme_bw() +
+  theme_solarized() +
   theme(legend.position = "none")
 ```
 
 
+Lastly, I tried my hand at some correlograms. To the extent that they worked or were accurate, I am not sure. However, I would like to come back to these types of charts in the future as I think they'd be useful in other data anaylses.
 
 
 
 
+```{r}
+ggcorr(person_data2, method = c("everything", "pearson")) 
+```
 
 
 
+```{r}
+data(person_data2)
+corr <- round(cor(person_data2), 1)
 
+# Plot
+ggcorrplot(corr, hc.order = TRUE, 
+           type = "lower", 
+           lab = TRUE, 
+           lab_size = 3, 
+           method="circle", 
+           colors = c("tomato2", "white", "springgreen3"), 
+           title="Correlogram of person_data2", 
+           ggtheme=theme_solarized)
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```{r}
+corr <- round(cor(person_data2), 1)
+ggcorrplot(corr, hc.order = TRUE, 
+           type = "upper", 
+           lab = TRUE, 
+           lab_size = 3, 
+           method="square", 
+           colors = c("tomato2", "white", "springgreen3"),
+           ggtheme=theme_solarized)
+```
 
