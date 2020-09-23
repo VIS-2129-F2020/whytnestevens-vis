@@ -2,7 +2,12 @@
 title: "CreativeAssignmentTwo"
 author: "Whytne Stevens"
 date: "9/18/2020"
-output: html_document
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float: true
 ---
 # Creative Assignment Two
 
@@ -11,7 +16,7 @@ For this creative assignment, I was itnersted in looking at urban areas on the A
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r load libraries}
+```{r load libraries, results = "hide", message = FALSE, warning = FALSE}
 library(ggplot2)
 library(sf)
 library(rnaturalearth)
@@ -19,6 +24,7 @@ library(tidyverse)
 library(ggspatial)
 library(cartogram)
 library(ggthemes)
+library(rgeos)
 ```
 
 
@@ -61,7 +67,24 @@ Africa_Sinusoidal <- "+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS8
 Africa_Equidistant_Conic <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=20 +lat_2=-23 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs "
 Africa_Lambert_Conformal_Conic <- "+proj=lcc +lat_1=20 +lat_2=-23 +lat_0=0 +lon_0=25 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 brads <- "+proj=tmerc +lat_0=0 +lon_0=31 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs"
+france <- "+proj=lcc +lat_1=46.8 +lat_0=46.8 +lon_0=2.337229166666663 +k_0=0.99987742 +x_0=600000 +y_0=2200000 +a=6378249.2 +b=6356515.000000472 +units=m +no_defs"
+NTF_France_III_degrees <- "+proj=lcc +lat_1=44.1 +lat_0=44.1 +lon_0=2.337229166666667 +k_0=0.999877499 +x_0=600000 +y_0=3200000 +a=6378249.2 +b=6356514.999904194 +units=m +no_defs"
+Brazil <- "+proj=longlat +ellps=GRS80 +no_defs"
+SAD69_Brazil <- "+proj=poly +lat_0=0 +lon_0=-54 +x_0=0 +y_0=0 +ellps=aust_SA +units=m +no_defs"
+Ba <- "+proj=poly +lat_0=0 +lon_0=-54 +x_0=0 +y_0=0 +ellps=aust_SA +units=m +no_defs"
+Japan_Plane_Rectangular_CS_V <- "+proj=tmerc +lat_0=36 +lon_0=134.3333333333333 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+Pusan_CRS <- "+proj=tmerc +lat_0=40 +lon_0=140.8333333333333 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs "
 ```
+
+As you can see, the ones based on Africa are more or less normal, with minimal disotrion
+
+```{r}
+africa_map +
+  geom_sf() +
+  coord_sf(crs = Africa_Lambert_Conformal_Conic) +
+  theme_solarized_2()
+```
+
 
 ```{r}
 africa_map +
@@ -90,6 +113,63 @@ africa_map +
   coord_sf(crs = East_Africa) +
   theme_solarized_2()
 ```
+
+
+
+
+
+On the other hand, the coordnate systmes not based in africa produced some very tineresting results:
+
+```{r}
+africa_map +
+  geom_sf() +
+  coord_sf(crs = NTF_France_III_degrees) +
+  theme_solarized_2()
+```
+
+
+```{r}
+africa_map +
+  geom_sf() +
+  coord_sf(crs = SAD69_Brazil) +
+  theme_solarized_2()
+```
+
+```{r}
+africa_map +
+  geom_sf() +
+  coord_sf(crs = Japan_Plane_Rectangular_CS_V) +
+  theme_solarized_2()
+```
+
+```{r}
+africa_map +
+  geom_sf() +
+  coord_sf(crs = Pusan_CRS) +
+  theme_solarized_2()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Having pulled these projections, I then pulled data on the urban areas in Africa
 
 ```{r}
@@ -101,8 +181,114 @@ sp::plot(urbanareas50)
 urbanareas10 <- ne_download(scale = 10, type = 'urban_areas', category = 'cultural')
 sp::plot(urbanareas10)
 ```
+For my analysis I created my own dataset using data provided from Africapolis.org, a project created by the Sahel and West Africa Club (SWAC) (which has ties to the Organisation for Economic Co-operation and Development (OECD)) in collaboration with e-geopolis.org (link: https://africapolis.org/data )
 
 
+
+
+```{r}
+africa_countries_transformed <- africa_countries %>%
+  st_transform(crs = Africa_Lambert_Conformal_Conic)
+```
+
+
+```{r}
+ggplot(africa_countries_transformed) +
+  geom_sf() +
+  theme_bw()
+```
+
+
+```{r, message=FALSE}
+urban_africa <- read_csv("africa_urbanization.csv")%>%
+  rename(upop15= "UrbanPopulation2015")%>%
+  mutate(Country= ifelse(Country=="Central African Republic","Central African Rep.", Country))%>%
+  mutate(Country= ifelse(Country=="Kingdom of Eswatini","Swaziland", Country))%>%
+  mutate(Country= ifelse(Country=="Cabo Verde","Cape Verde", Country))%>%
+  mutate(Country= ifelse(Country=="Republic of the Congo","Congo", Country))%>%
+  mutate(Country= ifelse(Country=="Dem.Rep.Congo","Dem. Rep. Congo", Country))%>%
+  mutate(Country= ifelse(Country=="Cote d`Ivoire","Côte d'Ivoire", Country))%>%
+  mutate(Country= ifelse(Country=="Equatorial Guinea","Eq. Guinea", Country))%>%
+  mutate(Country= ifelse(Country=="The Gambia","Gambia", Country))%>%
+  mutate(Country= ifelse(Country=="South Sudan","S. Sudan", Country))%>%
+  mutate(Country= ifelse(Country=="Sao Tome and Principe","São Tomé and Principe", Country))
+
+
+urban_africa_countries <-africa_countries_transformed %>%
+  left_join(urban_africa, by = c("name" = "Country")) %>%
+  select(name, upop15)
+```
+## Chloropleth map
+
+```{r, message = FALSE}
+ggplot(urban_africa_countries, aes(fill = upop15)) +
+  geom_sf(color = "gray") +
+  scale_fill_viridis_c(
+    name = "Urban Popuation in\nAfrican Countries, 2015",
+    breaks = seq(0, 100000000, by = 10000000),
+    labels = formatC(seq(0, 100000000, by = 10000000), 
+                     big.mark = ",", format = "f", digits = 0),
+    option = ) +
+  theme_map() +
+  theme(legend.background = element_blank())
+```
+
+
+## Continuous cartogram
+
+```{r, message = FALSE}
+urban_africa_cartogram_cont <- urban_africa_countries %>%
+  cartogram_cont("upop15")
+
+ggplot(urban_africa_cartogram_cont, aes(fill = upop15)) +
+geom_sf(color = NA) +
+  scale_fill_viridis_c(
+    name = "Urban Popuation in\nAfrican Countries, 2015",
+    breaks = seq(0, 100000000, by = 10000000),
+    labels = formatC(seq(0, 100000000, by = 10000000), 
+                     big.mark = ",", format = "f", digits = 0)) +
+  theme_map() +
+  theme(legend.background = element_blank())
+```
+
+
+## Non-continuous cartogram
+
+```{r, message = FALSE}
+urban_africa_cartogram_ncont <- urban_africa_countries %>%
+  cartogram_ncont("upop15")
+
+ggplot(urban_africa_cartogram_ncont, aes(fill = upop15)) +
+geom_sf(color = NA) +
+  scale_fill_viridis_c(
+    name = "Urban Popuation in\nAfrican Countries, 2015",
+    breaks = seq(0, 100000000, by = 10000000),
+    labels = formatC(seq(0, 100000000, by = 10000000), 
+                     big.mark = ",", format = "f", digits = 0)) +
+  theme_map() +
+  theme(legend.background = element_blank())
+```
+
+
+## Proportional symbol map
+
+```{r, message=FALSE, warning=FALSE}
+
+urban_africa_centeroids <- urban_africa_countries %>%
+  st_centroid()
+
+ggplot(africa_countries_transformed) +
+  geom_sf(fill = NA, color = "gray") +
+  geom_sf(data = urban_africa_centeroids, 
+            aes(size = upop15),
+            alpha = 0.5, color = "orange") +
+  scale_size_continuous(name = "Urban Popuation in\nAfrican Countries, 2015",
+      breaks = seq(0, 100000000, by = 10000000),
+      labels = formatC(seq(0, 100000000, by = 10000000), 
+                       big.mark = ",", format = "f", digits = 0),
+      range = c(0, 20)) +
+  theme_void() 
+```
 
 
 
