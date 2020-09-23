@@ -26,6 +26,8 @@ library(cartogram)
 library(ggthemes)
 library(rgeos)
 library(packcircles)
+library(viridis)
+library(wesanderson)
 ```
 
 
@@ -217,7 +219,25 @@ ggplot(urban_africa_countries, aes(fill = upop15)) +
     breaks = seq(0, 100000000, by = 10000000),
     labels = formatC(seq(0, 100000000, by = 10000000), 
                      big.mark = ",", format = "f", digits = 0),
-    option = ) +
+    option =) +
+  theme_map() +
+  theme(legend.background = element_blank())
+```
+
+
+After class today (23 September '20), I decided to experiment more with colors and was finally able to get the wesanderson color palettes to work. Even though the Royal1 palette does use red, it also offered more color differentiation which allows for the countries in the middle range of my data set to be more visible in the visualizations.
+
+```{r, message = FALSE}
+pal <- wes_palette("Royal1", 100, type = "continuous")
+
+ggplot(urban_africa_countries, aes(fill = upop15)) +
+  geom_sf(color = "tan") +
+  scale_fill_gradientn(
+    name = "Urban Population in\nAfrican Countries, 2015",
+    breaks = seq(0, 100000000, by = 10000000),
+    labels = formatC(seq(0, 100000000, by = 10000000), 
+                     big.mark = ",", format = "f", digits = 0),
+    colors = pal) +
   theme_map() +
   theme(legend.background = element_blank())
 ```
@@ -231,15 +251,15 @@ urban_africa_cartogram_cont <- urban_africa_countries %>%
 
 ggplot(urban_africa_cartogram_cont, aes(fill = upop15)) +
 geom_sf(color = NA) +
-  scale_fill_viridis_c(
+  scale_fill_gradientn(
     name = "Urban Population in\nAfrican Countries, 2015",
     breaks = seq(0, 100000000, by = 10000000),
     labels = formatC(seq(0, 100000000, by = 10000000), 
-                     big.mark = ",", format = "f", digits = 0)) +
+                     big.mark = ",", format = "f", digits = 0),
+    colors = pal) +
   theme_map() +
   theme(legend.background = element_blank())
 ```
-
 
 ## Non-Continuous Cartogram
 
@@ -249,11 +269,12 @@ urban_africa_cartogram_ncont <- urban_africa_countries %>%
 
 ggplot(urban_africa_cartogram_ncont, aes(fill = upop15)) +
 geom_sf(color = NA) +
-  scale_fill_viridis_c(
+    scale_fill_gradientn(
     name = "Urban Population in\nAfrican Countries, 2015",
     breaks = seq(0, 100000000, by = 10000000),
     labels = formatC(seq(0, 100000000, by = 10000000), 
-                     big.mark = ",", format = "f", digits = 0)) +
+                     big.mark = ",", format = "f", digits = 0),
+    colors = pal) +
   theme_map() +
   theme(legend.background = element_blank())
 ```
