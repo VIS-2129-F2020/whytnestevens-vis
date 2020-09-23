@@ -9,9 +9,9 @@ output:
     toc_depth: 3
     toc_float: true
 ---
-# Creative Assignment Two
 
-For this creative assignment, I was itnersted in looking at urban areas on the African continent
+For this creative assignment, I was interested in looking at urban areas on the African continent. First I loaded relevant r libraries and pulled a world map using the libraries loaded below.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -25,10 +25,11 @@ library(ggspatial)
 library(cartogram)
 library(ggthemes)
 library(rgeos)
+library(packcircles)
 ```
 
 
-First I pull a world map using the libraries loaded above.
+
 ```{r}
 world <- ne_countries(scale = 50, returnclass = "sf") 
 
@@ -39,7 +40,10 @@ world_map <- ggplot(world) +
 world_map
 ```
 
-I then pulled a map of the African continent with country boundaries drawn on the map
+
+# Experimenting with Map Projections of Africa
+I then pulled a map of the African continent with country boundaries drawn on the map.
+
 ```{r}
 africa_countries <- world %>%
   filter(continent == "Africa")
@@ -51,11 +55,14 @@ africa_map <- ggplot(africa_countries) +
 africa_map
 ```
 
+And added a scale bar as well.
 ```{r}
 africa_map +
   annotation_scale()
 ```
-Next I defined my coordinate systems. I decided on one that was more___(kklgk), one regional, and one local.
+
+Next I defined my coordinate systems. I wanted to experiment with a variety of coordinate systems for my projections, so I pulled some oriented on the African continent, some oriented on former colonizing countries such as France, and some oriented on Asian countries such as Japan.
+
 
 ```{r define crs options}
 Africa_AEA_Conic <- "+proj=aea +lat_1=20 +lat_2=-23 +lat_0=0 +lon_0=25 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
@@ -76,7 +83,10 @@ Japan_Plane_Rectangular_CS_V <- "+proj=tmerc +lat_0=36 +lon_0=134.3333333333333 
 Pusan_CRS <- "+proj=tmerc +lat_0=40 +lon_0=140.8333333333333 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs "
 ```
 
-As you can see, the ones based on Africa are more or less normal, with minimal disotrion
+## Minimally Distorted Map Projections of Africa
+
+
+As you can see, the ones based on Africa are more or less "normal", with minimal distortion:
 
 ```{r}
 africa_map +
@@ -117,8 +127,8 @@ africa_map +
 
 
 
-
-On the other hand, the coordnate systmes not based in africa produced some very tineresting results:
+## Heavily Distorted Map Projections of Africa
+On the other hand, the coordinate systems not based in Africa produced some very interesting results:
 
 ```{r}
 africa_map +
@@ -149,42 +159,8 @@ africa_map +
   theme_solarized_2()
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Having pulled these projections, I then pulled data on the urban areas in Africa
-
-```{r}
-urbanareas50 <- ne_download(scale = 50, type = 'urban_areas', category = 'cultural')
-sp::plot(urbanareas50)
-```
-
-```{r}
-urbanareas10 <- ne_download(scale = 10, type = 'urban_areas', category = 'cultural')
-sp::plot(urbanareas10)
-```
-For my analysis I created my own dataset using data provided from Africapolis.org, a project created by the Sahel and West Africa Club (SWAC) (which has ties to the Organisation for Economic Co-operation and Development (OECD)) in collaboration with e-geopolis.org (link: https://africapolis.org/data )
-
-
-
+# Setting Up Map and Dataset for Visualizing Urbanization in Africa
+After experimenting with different coordinate systems for my projections, I chose to use the Africa Lambert Conformal Conic coordinate system, using this to transform my original Africa map (africa_countries).
 
 ```{r}
 africa_countries_transformed <- africa_countries %>%
@@ -199,6 +175,10 @@ ggplot(africa_countries_transformed) +
 ```
 
 
+## Data Wrangling
+Having pulled these projections, I then pulled data on the urban areas in Africa. For my analysis I created my own dataset using data provided from Africapolis.org, a project created by the Sahel and West Africa Club (SWAC) (which has ties to the Organisation for Economic Co-operation and Development (OECD)) and e-geopolis.org (link: https://africapolis.org/data ). From this dataset, I am using the total urban population of each country to define and measure urbanization in African countries. I also had to mutate my data as some of the country names on my urban_africa dataset were not matching up with the other dataset (urban_africa_countries) I pulled using some of the r libraries I loaded.
+
+
 ```{r, message=FALSE}
 urban_africa <- read_csv("africa_urbanization.csv")%>%
   rename(upop15= "UrbanPopulation2015")%>%
@@ -206,7 +186,7 @@ urban_africa <- read_csv("africa_urbanization.csv")%>%
   mutate(Country= ifelse(Country=="Kingdom of Eswatini","Swaziland", Country))%>%
   mutate(Country= ifelse(Country=="Cabo Verde","Cape Verde", Country))%>%
   mutate(Country= ifelse(Country=="Republic of the Congo","Congo", Country))%>%
-  mutate(Country= ifelse(Country=="Dem.Rep.Congo","Dem. Rep. Congo", Country))%>%
+  mutate(Country= ifelse(Country=="Democratic Republic of the Congo","Dem. Rep. Congo", Country))%>%
   mutate(Country= ifelse(Country=="Cote d`Ivoire","Côte d'Ivoire", Country))%>%
   mutate(Country= ifelse(Country=="Equatorial Guinea","Eq. Guinea", Country))%>%
   mutate(Country= ifelse(Country=="The Gambia","Gambia", Country))%>%
@@ -218,13 +198,22 @@ urban_africa_countries <-africa_countries_transformed %>%
   left_join(urban_africa, by = c("name" = "Country")) %>%
   select(name, upop15)
 ```
-## Chloropleth map
+
+
+# Visualizing Urbanization in Africa
+After setting up the and dataset I wanted to use for this assignment, I was then able to create the following maps and cartograms to visualize my data. Even with my data wrangling however, I still wasn't able to account for four of the countries/regions: Comoros, Madagascar, Somaliland, and Western Sahara. There's a few explanations for some of these - Somaliland is a self declared state in Somalia but is not fully recognized internationally and therefore is not a fully sovereign state, and Western Sahara is a disputed territory in Morocco also not fully recognized internationally and therefore is not a fully sovereign state. 
+
+As for Comoros and Madagascar, these countries weren't included in the original dataset from Africapolis.org and the reasoning for this is unknown. I also noticed that Seychelles, another African country was not included in either the Africapolis.org data set or the one in the r libraries. Thus,  Comoros, Madagascar, Somaliland, and Western Sahara are either grayed out or blank on the maps/cartograms below.
+
+
+
+## Chloropleth Map
 
 ```{r, message = FALSE}
 ggplot(urban_africa_countries, aes(fill = upop15)) +
   geom_sf(color = "gray") +
   scale_fill_viridis_c(
-    name = "Urban Popuation in\nAfrican Countries, 2015",
+    name = "Urban Population in\nAfrican Countries, 2015",
     breaks = seq(0, 100000000, by = 10000000),
     labels = formatC(seq(0, 100000000, by = 10000000), 
                      big.mark = ",", format = "f", digits = 0),
@@ -234,7 +223,7 @@ ggplot(urban_africa_countries, aes(fill = upop15)) +
 ```
 
 
-## Continuous cartogram
+## Continuous Cartogram
 
 ```{r, message = FALSE}
 urban_africa_cartogram_cont <- urban_africa_countries %>%
@@ -243,7 +232,7 @@ urban_africa_cartogram_cont <- urban_africa_countries %>%
 ggplot(urban_africa_cartogram_cont, aes(fill = upop15)) +
 geom_sf(color = NA) +
   scale_fill_viridis_c(
-    name = "Urban Popuation in\nAfrican Countries, 2015",
+    name = "Urban Population in\nAfrican Countries, 2015",
     breaks = seq(0, 100000000, by = 10000000),
     labels = formatC(seq(0, 100000000, by = 10000000), 
                      big.mark = ",", format = "f", digits = 0)) +
@@ -252,7 +241,7 @@ geom_sf(color = NA) +
 ```
 
 
-## Non-continuous cartogram
+## Non-Continuous Cartogram
 
 ```{r, message = FALSE}
 urban_africa_cartogram_ncont <- urban_africa_countries %>%
@@ -261,7 +250,7 @@ urban_africa_cartogram_ncont <- urban_africa_countries %>%
 ggplot(urban_africa_cartogram_ncont, aes(fill = upop15)) +
 geom_sf(color = NA) +
   scale_fill_viridis_c(
-    name = "Urban Popuation in\nAfrican Countries, 2015",
+    name = "Urban Population in\nAfrican Countries, 2015",
     breaks = seq(0, 100000000, by = 10000000),
     labels = formatC(seq(0, 100000000, by = 10000000), 
                      big.mark = ",", format = "f", digits = 0)) +
@@ -270,7 +259,7 @@ geom_sf(color = NA) +
 ```
 
 
-## Proportional symbol map
+## Proportional Symbol Map
 
 ```{r, message=FALSE, warning=FALSE}
 
@@ -282,7 +271,7 @@ ggplot(africa_countries_transformed) +
   geom_sf(data = urban_africa_centeroids, 
             aes(size = upop15),
             alpha = 0.5, color = "orange") +
-  scale_size_continuous(name = "Urban Popuation in\nAfrican Countries, 2015",
+  scale_size_continuous(name = "Urban Population in\nAfrican Countries, 2015",
       breaks = seq(0, 100000000, by = 10000000),
       labels = formatC(seq(0, 100000000, by = 10000000), 
                        big.mark = ",", format = "f", digits = 0),
@@ -290,9 +279,5 @@ ggplot(africa_countries_transformed) +
   theme_void() 
 ```
 
-
-
-
-
-
-
+## Attempt at a Dorling Cartogram
+I did also try a Dorling cartogram but I wasn't able to get it to work. Maybe I will in the near future.
