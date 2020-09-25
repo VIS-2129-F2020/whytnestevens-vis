@@ -213,12 +213,13 @@ bottom_side <- st_bbox(greenspaces)$ymin
 
 
 ggplot(neighborhoods) +
-  geom_sf(fill = "lightsalmon1", color = "lightsalmon4") +
+  geom_sf(fill = "honeydew2", color = "honeydew4") +
   geom_sf(data = middleschools, size = 3,
           aes(color = publichousing_dist)) +
   coord_sf(xlim = c(left_side, right_side), 
            ylim = c(bottom_side, top_side), expand = FALSE) +
-  scale_color_viridis_c(name =  "Paris middle schools\nby distance to a public housing unit") +
+  scale_color_gradientn(name =  "Paris middle schools\nby distance to a public housing unit",
+                        colors = pal) +
   annotation_scale(location = "br") +
   annotation_north_arrow(location = "tr",
                          style = north_arrow_minimal()) +
@@ -230,7 +231,7 @@ ggplot(neighborhoods) +
                          sep = ""),
            hjust = 0, vjust = 0, size = 3) +
   theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
+  theme(panel.background = element_rect(fill = "ivory3"),
         legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray"))
 ```
@@ -239,12 +240,12 @@ ggplot(neighborhoods) +
 
 ## The number and proportion of Public Housing in Paris within Paris Neighborhoods. 
 ```{r}
-neighborhoodsmap <- neighborhoods %>%
+neighborhoods <- neighborhoods %>%
   mutate(num_publichousing = lengths(st_covers(neighborhoods, publichousing)))
 ```
 
 ```{r}
-ggplot(neighborhoodsmap) +
+ggplot(neighborhoods) +
   geom_sf(color = NA, 
           aes(fill = num_publichousing)) +
   scale_fill_gradientn(name = "Paris neighborhoods\nby number of Public Housing Units",
@@ -262,12 +263,13 @@ ggplot(neighborhoodsmap) +
 ```
 
 
+
 ## The number and proportion of Middle Schools in Paris within Paris Neighborhoods. 
 ```{r}
-neighborhoodsmap2 <- neighborhoods %>%
+neighborhoods <- neighborhoods %>%
   mutate(num_middleschools = lengths(st_covers(neighborhoods, middleschools)))
 
-ggplot(neighborhoodsmap2) +
+ggplot(neighborhoods) +
   geom_sf(color = NA, 
           aes(fill = num_middleschools)) +
   scale_fill_gradientn(name = "Paris neighborhoods\nby number of Middle Schools",
@@ -315,10 +317,59 @@ ggplot(greenspacesmap) +
 
 ## The number and proportion of Paris Neighborhoods containing Public Housing in Paris .
 
+```{r}
+neighborhoods <- neighborhoods %>%
+  mutate(area = set_units(st_area(neighborhoods), km^2)) %>%
+  mutate(publichousing_dens = as.numeric(num_publichousing / area))
+
+ggplot(neighborhoods) +
+  geom_sf(color = NA, 
+          aes(fill = publichousing_dens)) +
+    scale_fill_gradientn(name = 
+                           "Paris neighborhoods\nby public housing density",
+                       breaks = breaks <- seq(0, 4000, by = 500),
+                       labels = paste(prettyNum(breaks, big.mark = ","),
+                                      "public housing units per square km"),
+                       
+    colors = pal) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.position = "right",
+    legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+
+
  
 ## The number and proportion of Paris Neighborhoods containing Middle Schools in Paris
 
+```{r}
+neighborhoods <- neighborhoods %>%
+  mutate(area = set_units(st_area(neighborhoods), km^2)) %>%
+  mutate(middleschools_dens = as.numeric(num_middleschools / area))
 
+ggplot(neighborhoods) +
+  geom_sf(color = NA, 
+          aes(fill = middleschools_dens)) +
+    scale_fill_gradientn(name = 
+                           "Paris neighborhoods\nby middle schools density",
+                       breaks = breaks <- seq(0, 4000, by = 500),
+                       labels = paste(prettyNum(breaks, big.mark = ","),
+                                      "middle schools per square km"),
+                       colors = pal) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.position = "right",
+    legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
 
 ## The number and proportion of Paris Green Spaces that overlap with Paris Neighborhoods.
 
