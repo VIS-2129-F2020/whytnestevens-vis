@@ -1,0 +1,363 @@
+---
+title: "CreativeAssignmentThree"
+author: "Whytne Stevens"
+date: "9/24/2020"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+# Intro/Set Up
+
+For this creative assignment, I was interested in looking at datasets from Paris, France. First I loaded relevant r libraries as well as other r libraries that might be useful to me later on and pulled a world map using the libraries loaded below.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load libraries, results = "hide", message = FALSE, warning = FALSE}
+library(sf)
+library(tidyverse)
+library(ggthemes)
+library(ggspatial)
+library(units)
+library(nngeo)
+library(wesanderson)
+library(ggplot2)
+library(rnaturalearth)
+library(cartogram)
+library(rgeos)
+library(packcircles)
+library(viridis)
+```
+
+
+With the knowledge of French that I do have, I was able to decipher what many of the datasets were exploring. I ended up choosing the following for this assignment:
+
+- Logements sociaux financés à Paris/ Public Housing in Paris 
+
+- Espaces verts et assimilés/ Paris Green Spaces 
+
+- Arrondissements/Paris Neighborhoods
+
+- Etablissements scolaires – Collèges/ Middle Schools in Paris
+
+Next, I loaded the data I found on opendata.paris.fr:
+
+```{r}
+neighborhoods <- st_read("https://opendata.paris.fr/explore/dataset/arrondissements/download/?format=kml&timezone=America/Chicago&lang=fr", 
+                  quiet = TRUE) 
+
+publichousing <- st_read("https://opendata.paris.fr/explore/dataset/logements-sociaux-finances-a-paris/download/?format=kml&timezone=America/Chicago&lang=fr", 
+                 quiet = TRUE)
+
+middleschools <- st_read("https://opendata.paris.fr/explore/dataset/etablissements-scolaires-colleges/download/?format=kml&timezone=America/Chicago&lang=fr", 
+                   quiet = TRUE) 
+
+greenspaces <- st_read("https://opendata.paris.fr/explore/dataset/espaces_verts/download/?format=kml&timezone=America/Chicago&lang=fr", 
+                 quiet = TRUE) 
+```
+
+
+After loading the data, I then transformed it using the NTF France III degrees coordinate system
+
+```{r}
+NTF_France_III_degrees <-"+proj=lcc +lat_1=44.1 +lat_0=44.1 +lon_0=2.337229166666667 +k_0=0.999877499 +x_0=600000 +y_0=3200000 +a=6378249.2 +b=6356514.999904194 +units=m +no_defs"
+
+neighborhoods <- neighborhoods %>%
+  st_transform(NTF_France_III_degrees)
+
+publichousing <- publichousing %>%
+  st_transform(NTF_France_III_degrees)
+
+middleschools <- middleschools %>%
+  st_transform(NTF_France_III_degrees)
+
+greenspaces <- greenspaces %>%
+  st_transform(NTF_France_III_degrees)
+```
+
+And also selected a color palette to use for some of the maps using the wesanderson package:
+
+```{r}
+pal <- wes_palette("Royal1", 100, type = "continuous")
+```
+
+## Map w/ all datasets
+
+```{r}
+ggplot(neighborhoods) +
+  geom_sf(fill = "lemonchiffon", color = "lemonchiffon4") +
+  geom_sf(data= greenspaces, fill = "olivedrab", color = "olivedrab") +
+  geom_sf(data = middleschools, color = "cornflowerblue",size = 1) +
+  geom_sf(data = publichousing, color = "orange", size = 0.75) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray")) +
+  annotation_scale()
+```
+
+
+
+## The number and proportion of Middle Schools in Paris with a specified distance of Public Housing in Paris . 
+
+```{r}
+publichousing_buffer <- st_buffer(publichousing, dist = 100) %>%
+  st_union()
+
+ggplot(publichousing_buffer) +
+  geom_sf() +
+    theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+```{r}
+middleschools_publichousing <- middleschools[publichousing_buffer,]
+  
+ggplot(publichousing_buffer) +
+  geom_sf() +
+  geom_sf(data = middleschools_publichousing, 
+          color = "darkorange", 
+          size = 2) +
+   theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+```{r}
+middleschools <- middleschools %>%
+  st_join(middleschools_publichousing) %>%
+  mutate(by_publichousing = !is.na(Name.y))
+```
+
+
+
+```{r}
+n_publichousing_middleschools <- sum(middleschools$by_publichousing)
+
+n_publichousing_middleschools
+```
+
+
+
+```{r}
+n_middleschools <- length(middleschools$by_publichousing)
+
+pct_publichousing_middleschools <- n_publichousing_middleschools / n_middleschools
+
+pct_publichousing_middleschools
+```
+
+
+
+```{r}
+left_side  <- st_bbox(greenspaces)$xmin
+top_side <- st_bbox(greenspaces)$ymax
+
+ggplot(neighborhoods) +
+  geom_sf(fill = "lightsalmon1", color = "lightsalmon4") +
+  geom_sf(data = middleschools, size = 3,
+          aes(color = by_publichousing)) +
+  scale_color_manual(values = c("peachpuff2", "peachpuff4"),
+          name = "Paris Middle Schools\nby distance to a Public Housing Unit", 
+          labels = c("No Public Housing Units within 30 m",
+                     "Public Housing Unit within 30 m")) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+  annotate(geom = "text", x = left_side, 
+           y = top_side, 
+           label = paste("Of the ", 
+                         prettyNum(n_middleschools, big.mark = ","),
+                         " middle schools in Paris\n", 
+                         prettyNum(n_publichousing_middleschools, big.mark = ","),
+                         " (", 
+                         prettyNum(100*pct_publichousing_middleschools, digits = 0),
+                         "%) are within 100\nmeters of a Public Housing Unit.",
+                         sep = ""),
+           hjust = 0, vjust = 1, size = 3) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+
+
+## The average (Euclidean) distance between Middle Schools in Paris and their nearest respective Public Housing in Paris. 
+
+```{r}
+middleschools <- middleschools %>%
+  mutate(publichousing_dist = st_nn(middleschools, publichousing, 
+                           returnDist = TRUE)$dist) %>%
+  mutate(publichousing_dist = as.numeric(publichousing_dist))
+```
+```{r}
+avg_publichousing_dist <- mean(middleschools$publichousing_dist)
+
+avg_publichousing_dist
+```
+
+
+```{r}
+right_side <- st_bbox(greenspaces)$xmax
+left_side  <- st_bbox(greenspaces)$xmin
+top_side <- st_bbox(greenspaces)$ymax
+bottom_side <- st_bbox(greenspaces)$ymin
+
+
+ggplot(neighborhoods) +
+  geom_sf(fill = "lightsalmon1", color = "lightsalmon4") +
+  geom_sf(data = middleschools, size = 3,
+          aes(color = publichousing_dist)) +
+  coord_sf(xlim = c(left_side, right_side), 
+           ylim = c(bottom_side, top_side), expand = FALSE) +
+  scale_color_viridis_c(name =  "Paris middle schools\nby distance to a public housing unit") +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+  annotate(geom = "text", x = left_side + 2000, 
+           y = top_side - 1500, 
+           label = paste("On average, a Paris middle school\nis ", 
+                         prettyNum(avg_publichousing_dist, digits = 3),
+                         " meters from a public housing unit.",
+                         sep = ""),
+           hjust = 0, vjust = 0, size = 3) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+
+
+## The number and proportion of Public Housing in Paris within Paris Neighborhoods. 
+```{r}
+neighborhoodsmap <- neighborhoods %>%
+  mutate(num_publichousing = lengths(st_covers(neighborhoods, publichousing)))
+```
+
+```{r}
+ggplot(neighborhoodsmap) +
+  geom_sf(color = NA, 
+          aes(fill = num_publichousing)) +
+  scale_fill_gradientn(name = "Paris neighborhoods\nby number of Public Housing Units",
+    breaks = seq(0, 4000, by = 500),
+    labels = formatC(seq(0, 4000, by = 500), 
+                     big.mark = ",", format = "f", digits = 0),
+    colors = pal) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+
+## The number and proportion of Middle Schools in Paris within Paris Neighborhoods. 
+```{r}
+neighborhoodsmap2 <- neighborhoods %>%
+  mutate(num_middleschools = lengths(st_covers(neighborhoods, middleschools)))
+
+ggplot(neighborhoodsmap2) +
+  geom_sf(color = NA, 
+          aes(fill = num_middleschools)) +
+  scale_fill_gradientn(name = "Paris neighborhoods\nby number of Middle Schools",
+    breaks = seq(0, 400, by = 50),
+    labels = formatC(seq(0, 400, by = 50), 
+                     big.mark = ",", format = "f", digits = 0),
+    colors = pal) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+
+## The number and proportion of Public Housing in Paris within Paris Green Spaces. 
+```{r}
+greenspacesmap <- greenspaces %>%
+  mutate(num_publichousing = lengths(st_covers(greenspaces, publichousing)))
+```
+
+```{r}
+pal <- wes_palette("Royal1", 100, type = "continuous")
+
+ggplot(greenspacesmap) +
+  geom_sf(color = NA, 
+          aes(fill = num_publichousing)) +
+  scale_fill_gradientn(name = "Paris greenspaces\nby number of \nPublic Housing Units",
+    breaks = seq(0, 4000, by = 500),
+    labels = formatC(seq(0, 4000, by = 500), 
+                     big.mark = ",", format = "f", digits = 0),
+    colors = pal) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+
+
+## The number and proportion of Paris Neighborhoods containing Public Housing in Paris .
+
+ 
+## The number and proportion of Paris Neighborhoods containing Middle Schools in Paris
+
+
+
+## The number and proportion of Paris Green Spaces that overlap with Paris Neighborhoods.
+
+```{r}
+neighborhoods <- neighborhoods %>%
+  mutate(num_greenspaces = lengths(st_overlaps(neighborhoods, greenspaces))) %>%
+  mutate(has_greenspaces = num_greenspaces > 0)
+```
+
+```{r}
+n_greenspaces_neighborhoods <- sum(neighborhoods$has_greenspaces)
+
+n_greenspaces_neighborhoods
+```
+```{r}
+left_side  <- st_bbox(greenspaces)$xmin
+top_side <- st_bbox(greenspaces)$ymax
+
+ggplot(greenspaces) +
+  geom_sf(fill = "lightsalmon1", color = "lightsalmon4") +
+  geom_sf(data = neighborhoods,
+          aes(fill = has_greenspaces)) +
+  scale_fill_manual(values = c("peachpuff2", "peachpuff4"),
+          name = "Paris Neighborhoods\nby presence of a green space", 
+          labels = c("Neighborhood without\nan overlapping green space",
+                     "Neighborhood with an\noverlapping green space")) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+  annotate(geom = "text", x = left_side, 
+           y = top_side - 1000, 
+           label = paste(n_greenspaces_neighborhoods ,
+                         "of Paris's", 
+                         length(neighborhoods$Name),
+                         "neighborhoods contain\nor overlap with", 
+                         "a green space."),
+           hjust = 0, vjust = 0, size = 3) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "ivory"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
