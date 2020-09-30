@@ -85,50 +85,78 @@ And also selected a color palette to use for some of the maps using the wesander
 pal <- wes_palette("Royal1", 100, type = "continuous")
 ```
 
-## Map w/ all datasets
 
-```{r}
+Below is the map I produced visualizing all of my datasets; here is the key:
+- Logements sociaux financés à Paris/ Public Housing in Paris are represented by the blue dots
+
+- Espaces verts et assimilés/ Paris Green Spaces are in green
+
+- Arrondissements/Paris Neighborhoods are in ivory
+
+- Etablissements scolaires – Collèges/ Middle Schools in Paris are represented by the red-orange dots
+
+
+```{r, fig.height=11}
 ggplot(neighborhoods) +
-  geom_sf(fill = "lemonchiffon", color = "lemonchiffon4") +
-  geom_sf(data= greenspaces, fill = "olivedrab", color = "olivedrab") +
-  geom_sf(data = middleschools, color = "cornflowerblue",size = 1) +
-  geom_sf(data = publichousing, color = "orange", size = 0.75) +
+  geom_sf(fill = "ivory", color = "ivory4") +
+  geom_sf(data= greenspaces, fill = "darkseagreen", color = "darkseagreen") +
+  geom_sf(data = middleschools, color = "tomato",size = 2) +
+  geom_sf(data = publichousing, color = "steelblue", size = 1) +
+    scale_color_manual(values = c("ivory", "darkseagreen", "tomato", "steelblue"),
+          name = "Map Legend", 
+          labels = c("Neighborhoods",
+                     "Greenspaces",
+                     "Middle Schools",
+                     "Public Housing Buildings/Units"))+
   theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
+  theme(panel.background = element_rect(fill = "seashell2"),
         legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray")) +
   annotation_scale()
 ```
 
+# Distances Between Points 
+
+## The number and proportion of Middle Schools in Paris with a specified distance of a Public Housing Building/Unit in Paris . 
+
+I was first interested in calculating the number of middle schools within a certain distance of a public housing building/unit. At first I wanted the distance to represent the average distance walked in 30 min but after doing that the buffer became too big, so I set my buffer to 100 meters
 
 
-## The number and proportion of Middle Schools in Paris with a specified distance of Public Housing in Paris . 
-
-```{r}
+```{r, fig.height=7}
 publichousing_buffer <- st_buffer(publichousing, dist = 100) %>%
   st_union()
 
 ggplot(publichousing_buffer) +
   geom_sf() +
+    geom_sf(data = publichousing_buffer, 
+          fill = "ivory") +
     theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
+  theme(panel.background = element_rect(fill = "seashell2"),
         legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray"))
 ```
 
-```{r}
+
+I then plotted the middle schools, represented by the red-orange dots
+
+```{r, fig.height=7}
 middleschools_publichousing <- middleschools[publichousing_buffer,]
   
 ggplot(publichousing_buffer) +
   geom_sf() +
+      geom_sf(data = publichousing_buffer, 
+          fill = "ivory")+
   geom_sf(data = middleschools_publichousing, 
-          color = "darkorange", 
+          color = "tomato2", 
           size = 2) +
    theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
+  theme(panel.background = element_rect(fill = "seashell2"),
         legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray"))
 ```
+
+
+I then ran some codes to analyze my dataset and provide me with a concrete number for how many middle schools are located within 100 meters of a public housing building/unit in Paris:
 
 ```{r}
 middleschools <- middleschools %>%
@@ -154,18 +182,19 @@ pct_publichousing_middleschools <- n_publichousing_middleschools / n_middleschoo
 pct_publichousing_middleschools
 ```
 
+Based on this analysis, there are about 263, or 63% of middle schools are located within 100 meters of a public housing building/unit in Paris. I decided to map out my results here as well:
 
 
-```{r}
+```{r, fig.height=7}
 left_side  <- st_bbox(greenspaces)$xmin
 top_side <- st_bbox(greenspaces)$ymax
 
 ggplot(neighborhoods) +
-  geom_sf(fill = "lightsalmon1", color = "lightsalmon4") +
+  geom_sf(fill = "ivory", color = "ivory4") +
   geom_sf(data = middleschools, size = 3,
           aes(color = by_publichousing)) +
-  scale_color_manual(values = c("peachpuff2", "peachpuff4"),
-          name = "Paris Middle Schools\nby distance to a Public Housing Unit", 
+  scale_color_manual(values = c("tomato4", "tomato2"),
+          name = "Paris Middle Schools\nby distance to a Public Housing Building/Unit", 
           labels = c("No Public Housing Units within 30 m",
                      "Public Housing Unit within 30 m")) +
   annotation_scale(location = "br") +
@@ -179,18 +208,21 @@ ggplot(neighborhoods) +
                          prettyNum(n_publichousing_middleschools, big.mark = ","),
                          " (", 
                          prettyNum(100*pct_publichousing_middleschools, digits = 0),
-                         "%) are within 100\nmeters of a Public Housing Unit.",
+                         "%) are within 100 meters \nof a Public Housing Building/Unit.",
                          sep = ""),
-           hjust = 0, vjust = 1, size = 3) +
+           hjust = 0.10, vjust = 1, size = 4) +
   theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
+  theme(panel.background = element_rect(fill = "seashell2"),
         legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray"))
 ```
 
 
 
-## The average (Euclidean) distance between Middle Schools in Paris and their nearest respective Public Housing in Paris. 
+## The average (Euclidean) distance between Middle Schools in Paris and their nearest respective Public Housing in Paris.
+
+Next, I was interested in calculating the average distance between middle schools and public housing buildings/units in Paris. At first I wanted the distance to represent the average distance walked in 30 min but after doing that the buffer became too big, so I set my buffer to 100 meters. I ran some codes to and provide me with a concrete number for this question as well:
+
 
 ```{r}
 middleschools <- middleschools %>%
@@ -198,14 +230,17 @@ middleschools <- middleschools %>%
                            returnDist = TRUE)$dist) %>%
   mutate(publichousing_dist = as.numeric(publichousing_dist))
 ```
+
 ```{r}
 avg_publichousing_dist <- mean(middleschools$publichousing_dist)
 
 avg_publichousing_dist
 ```
 
+The result came to be 94.64589 meters, which is the average distance between middle schools and public housing buildings/units in Paris. I mapped this as well:
 
-```{r}
+
+```{r, fig.height=7}
 right_side <- st_bbox(greenspaces)$xmax
 left_side  <- st_bbox(greenspaces)$xmin
 top_side <- st_bbox(greenspaces)$ymax
@@ -213,12 +248,12 @@ bottom_side <- st_bbox(greenspaces)$ymin
 
 
 ggplot(neighborhoods) +
-  geom_sf(fill = "honeydew2", color = "honeydew4") +
+  geom_sf(fill = "ivory", color = "ivory4") +
   geom_sf(data = middleschools, size = 3,
           aes(color = publichousing_dist)) +
   coord_sf(xlim = c(left_side, right_side), 
            ylim = c(bottom_side, top_side), expand = FALSE) +
-  scale_color_gradientn(name =  "Paris middle schools\nby distance to a public housing unit",
+  scale_color_gradientn(name =  "Paris middle schools\nby distance to a Public Housing Building/Unit",
                         colors = pal) +
   annotation_scale(location = "br") +
   annotation_north_arrow(location = "tr",
@@ -227,37 +262,44 @@ ggplot(neighborhoods) +
            y = top_side - 1500, 
            label = paste("On average, a Paris middle school\nis ", 
                          prettyNum(avg_publichousing_dist, digits = 3),
-                         " meters from a public housing unit.",
+                         " meters from a \nPublic Housing Building/Unit.",
                          sep = ""),
-           hjust = 0, vjust = 0, size = 3) +
+           hjust = 0.20, vjust = 0.5, size = 4) +
   theme_map() +
-  theme(panel.background = element_rect(fill = "ivory3"),
+  theme(panel.background = element_rect(fill = "seashell2"),
         legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray"))
 ```
 
 
 
+
+
+
+
+# Number/Proportion of Points in a Polygon
+The following maps visualize 1) the number and proportion of public housing buildings/units and middle schools in Paris neighborhoods and 2) the number and proportion of Paris neighborhoods containing public housing buildings/units and middle schools:
+
 ## The number and proportion of Public Housing in Paris within Paris Neighborhoods. 
 ```{r}
-neighborhoods <- neighborhoods %>%
+neighborhoodsmap1 <- neighborhoods %>%
   mutate(num_publichousing = lengths(st_covers(neighborhoods, publichousing)))
 ```
 
-```{r}
-ggplot(neighborhoods) +
+```{r, fig.height=7}
+ggplot(neighborhoodsmap1) +
   geom_sf(color = NA, 
           aes(fill = num_publichousing)) +
-  scale_fill_gradientn(name = "Paris neighborhoods\nby number of Public Housing Units",
-    breaks = seq(0, 4000, by = 500),
-    labels = formatC(seq(0, 4000, by = 500), 
+  scale_fill_gradientn(name = "Paris neighborhoods\nby number of Public Housing Buildings/Units",
+    breaks = seq(0, 1000, by = 50),
+    labels = formatC(seq(0, 1000, by = 50), 
                      big.mark = ",", format = "f", digits = 0),
     colors = pal) +
   annotation_scale(location = "br") +
   annotation_north_arrow(location = "tr",
                          style = north_arrow_minimal()) +
   theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
+  theme(panel.background = element_rect(fill = "seashell2"),
         legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray"))
 ```
@@ -266,81 +308,60 @@ ggplot(neighborhoods) +
 
 ## The number and proportion of Middle Schools in Paris within Paris Neighborhoods. 
 ```{r}
-neighborhoods <- neighborhoods %>%
+neighborhoodsmap2 <- neighborhoods %>%
   mutate(num_middleschools = lengths(st_covers(neighborhoods, middleschools)))
+```
 
-ggplot(neighborhoods) +
+```{r, fig.height=7}
+ggplot(neighborhoodsmap2) +
   geom_sf(color = NA, 
           aes(fill = num_middleschools)) +
   scale_fill_gradientn(name = "Paris neighborhoods\nby number of Middle Schools",
-    breaks = seq(0, 400, by = 50),
-    labels = formatC(seq(0, 400, by = 50), 
+    breaks = seq(0, 50, by = 10),
+    labels = formatC(seq(0, 50, by = 10), 
                      big.mark = ",", format = "f", digits = 0),
     colors = pal) +
   annotation_scale(location = "br") +
   annotation_north_arrow(location = "tr",
                          style = north_arrow_minimal()) +
 theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
+  theme(panel.background = element_rect(fill = "seashell2"),
         legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray"))
 ```
 
-
-## The number and proportion of Public Housing in Paris within Paris Green Spaces. 
-```{r}
-greenspacesmap <- greenspaces %>%
-  mutate(num_publichousing = lengths(st_covers(greenspaces, publichousing)))
-```
-
-```{r}
-pal <- wes_palette("Royal1", 100, type = "continuous")
-
-ggplot(greenspacesmap) +
-  geom_sf(color = NA, 
-          aes(fill = num_publichousing)) +
-  scale_fill_gradientn(name = "Paris greenspaces\nby number of \nPublic Housing Units",
-    breaks = seq(0, 4000, by = 500),
-    labels = formatC(seq(0, 4000, by = 500), 
-                     big.mark = ",", format = "f", digits = 0),
-    colors = pal) +
-  annotation_scale(location = "br") +
-  annotation_north_arrow(location = "tr",
-                         style = north_arrow_minimal()) +
-  theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
-        legend.background = element_rect(fill = alpha("white", 0.5), 
-                                         color = "gray"))
-```
 
 
 
 ## The number and proportion of Paris Neighborhoods containing Public Housing in Paris .
 
 ```{r}
-neighborhoods <- neighborhoods %>%
+neighborhoodsmap3 <- neighborhoods %>%
+  mutate(num_publichousing = lengths(st_covers(neighborhoods, publichousing))) %>%
   mutate(area = set_units(st_area(neighborhoods), km^2)) %>%
   mutate(publichousing_dens = as.numeric(num_publichousing / area))
+```
 
-ggplot(neighborhoods) +
+```{r, fig.height=7}
+ggplot(neighborhoodsmap3) +
   geom_sf(color = NA, 
           aes(fill = publichousing_dens)) +
     scale_fill_gradientn(name = 
-                           "Paris neighborhoods\nby public housing density",
-                       breaks = breaks <- seq(0, 4000, by = 500),
+                           "Paris neighborhoods\nby Public Housing Building/Unit\n density",
+                       breaks = breaks <- seq(0, 90, by = 15),
                        labels = paste(prettyNum(breaks, big.mark = ","),
-                                      "public housing units per square km"),
+                                      "Public Housing \nBuildings/Units per square km"),
                        
     colors = pal) +
   annotation_scale(location = "br") +
   annotation_north_arrow(location = "tr",
                          style = north_arrow_minimal()) +
-theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
-        legend.position = "right",
-    legend.background = element_rect(fill = alpha("white", 0.5), 
+ theme_map() +
+  theme(panel.background = element_rect(fill = "seashell2"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray"))
 ```
+
 
 
 
@@ -348,16 +369,20 @@ theme_map() +
 ## The number and proportion of Paris Neighborhoods containing Middle Schools in Paris
 
 ```{r}
-neighborhoods <- neighborhoods %>%
+neighborhoodsmap4 <- neighborhoods %>%
+  mutate(num_middleschools = lengths(st_covers(neighborhoods, middleschools))) %>%
   mutate(area = set_units(st_area(neighborhoods), km^2)) %>%
   mutate(middleschools_dens = as.numeric(num_middleschools / area))
+```
 
-ggplot(neighborhoods) +
+
+```{r, fig.height=7}
+ggplot(neighborhoodsmap4) +
   geom_sf(color = NA, 
           aes(fill = middleschools_dens)) +
     scale_fill_gradientn(name = 
-                           "Paris neighborhoods\nby middle schools density",
-                       breaks = breaks <- seq(0, 4000, by = 500),
+                           "Paris neighborhoods\nby density of middle schools",
+                       breaks = breaks <- seq(0, 10, by = 1),
                        labels = paste(prettyNum(breaks, big.mark = ","),
                                       "middle schools per square km"),
                        colors = pal) +
@@ -365,13 +390,47 @@ ggplot(neighborhoods) +
   annotation_north_arrow(location = "tr",
                          style = north_arrow_minimal()) +
 theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
+  theme(panel.background = element_rect(fill = "seashell2"),
         legend.position = "right",
     legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray"))
 ```
+## The number and proportion of Public Housing Buildings/Units in Paris within Paris Green Spaces. 
+
+I was curious to see how many public housing buildings/units in Paris were within a green space in Paris, and interestingly the number was very low, as demonstrated in the map below:
+
+```{r}
+greenspacesmap <- greenspaces %>%
+  mutate(num_publichousing = lengths(st_covers(greenspaces, publichousing)))
+```
+
+```{r, fig.height=7}
+pal <- wes_palette("Royal1", 100, type = "continuous")
+
+ggplot(greenspacesmap) +
+  geom_sf(color = NA, 
+          aes(fill = num_publichousing)) +
+  scale_fill_gradientn(name = "Paris greenspaces\nby number of \nPublic Housing Buildings/Units",
+    breaks = seq(0, 10, by = 1),
+    labels = formatC(seq(0, 10, by = 1), 
+                     big.mark = ",", format = "f", digits = 0),
+    colors = pal) +
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_minimal()) +
+  theme_map() +
+  theme(panel.background = element_rect(fill = "seashell2"),
+        legend.background = element_rect(fill = alpha("white", 0.5), 
+                                         color = "gray"))
+```
+
+
+
+
 
 ## The number and proportion of Paris Green Spaces that overlap with Paris Neighborhoods.
+
+Lastly, I decided to calculate the number and proportion of green spaces that overlap with Paris neighborhoods and map that as well:
 
 ```{r}
 neighborhoods <- neighborhoods %>%
@@ -384,15 +443,16 @@ n_greenspaces_neighborhoods <- sum(neighborhoods$has_greenspaces)
 
 n_greenspaces_neighborhoods
 ```
-```{r}
+
+```{r, fig.height=7}
 left_side  <- st_bbox(greenspaces)$xmin
 top_side <- st_bbox(greenspaces)$ymax
 
 ggplot(greenspaces) +
-  geom_sf(fill = "lightsalmon1", color = "lightsalmon4") +
+  geom_sf(fill = "ivory", color = "ivory4") +
   geom_sf(data = neighborhoods,
           aes(fill = has_greenspaces)) +
-  scale_fill_manual(values = c("peachpuff2", "peachpuff4"),
+  scale_fill_manual(values = c("darkseagreen2", "darkseagreen4"),
           name = "Paris Neighborhoods\nby presence of a green space", 
           labels = c("Neighborhood without\nan overlapping green space",
                      "Neighborhood with an\noverlapping green space")) +
@@ -406,9 +466,16 @@ ggplot(greenspaces) +
                          length(neighborhoods$Name),
                          "neighborhoods contain\nor overlap with", 
                          "a green space."),
-           hjust = 0, vjust = 0, size = 3) +
+           hjust = 0.05, vjust = 0, size = 4) +
   theme_map() +
-  theme(panel.background = element_rect(fill = "ivory"),
+  theme(panel.background = element_rect(fill = "seashell2"),
         legend.background = element_rect(fill = alpha("white", 0.5), 
                                          color = "gray"))
 ```
+
+
+
+
+# Conclusion/Final Thoughts
+
+Provided with more time, I would go back and do a deeper analysis of each neighborhood to add more context to what has been visualized here and therefore to further understand the results I got from making these maps.
