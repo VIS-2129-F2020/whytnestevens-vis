@@ -104,13 +104,6 @@ otp_stop()
 ```
 
 
-
-```{r}
-pal <- wes_palette("Royal1", 3, type = "discrete")
-```
-
-
-
 ```{r}
 right_side <- st_bbox(iso_all_modes)$xmax
 left_side  <- st_bbox(iso_all_modes)$xmin
@@ -123,9 +116,9 @@ ggplot(iso_all_modes) +
   geom_sf(data = dcfarmersmarkets) +
   coord_sf(xlim = c(left_side, right_side), 
            ylim = c(bottom_side, top_side), expand = FALSE) +
-  scale_color_gradientn(name = "Area that is reachable within 5 minutes",
-                       labels = c("By car", "By foot"),
-                        colors = pal) +
+  scale_fill_viridis_d(name = "Area that is reachable within 5 minutes",
+                     labels = c("By car", "By foot", "By bike"),
+                     option="plasma") +
   theme_map() +
   labs(caption = "Basemap Copyright OpenStreetMap contributors")
 ```
