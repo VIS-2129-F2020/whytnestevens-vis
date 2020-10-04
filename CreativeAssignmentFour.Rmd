@@ -117,8 +117,7 @@ ggplot(iso_all_modes) +
   coord_sf(xlim = c(left_side, right_side), 
            ylim = c(bottom_side, top_side), expand = FALSE) +
   scale_fill_viridis_d(name = "Area that is reachable within 5 minutes",
-                     labels = c("By car", "By foot", "By bike"),
-                     option="plasma") +
+                     labels = c("By car", "By foot", "By bike")) +
   theme_map() +
   labs(caption = "Basemap Copyright OpenStreetMap contributors")
 ```
