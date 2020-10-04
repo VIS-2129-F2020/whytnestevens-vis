@@ -24,7 +24,10 @@ library(tidyverse)
 library(sf)
 library(ggthemes)
 library(ggspatial)
-library(wesanderson)
+library(sp)
+library(stringr)
+library(rgeos)
+library(tidygeocoder)
 ```
 
 
@@ -121,6 +124,8 @@ ggplot(iso_all_modes) +
   theme_map() +
   labs(caption = "Basemap Copyright OpenStreetMap contributors")
 ```
+
+
 # next
 
 
@@ -128,8 +133,221 @@ ggplot(iso_all_modes) +
 
 
 ```{r}
-
+address_list = c("225 7th St SE, Washington, DC", 
+                 "1500 20th St NW, Washington, DC",
+                 "901 23rd St NW, Washington, DC",
+                 "1300 Pennsylvania Ave NW, Washington, DC")
+points <- geo(address = address_list, mode = "batch") 
+head(points)
 ```
+
+
+
+```{r}
+points <- st_as_sf(x = points,                         
+           coords = c("long", "lat"),
+           crs = 4326)
+```
+
+```{r}
+multiple_points_10min_walk <- 
+  otp_isochrone(otpcon = otpcon, fromPlace = points, 
+                mode = "WALK", cutoffSec = 600)
+```
+
+
+```{r}
+ggplot(multiple_points_10min_walk) +
+  annotation_map_tile(zoomin = 0, type = "stamenbw", progress = "none") +
+  geom_sf(fill ="orange", alpha=0.2) +
+  theme_map()
+```
+
+
+
+```{r}
+metrostops <- st_read("https://opendata.arcgis.com/datasets/54018b7f06b943f2af278bbe415df1de_52.kml",
+                     quiet=TRUE)
+```
+
+
+```{r}
+metrostops2 <- st_read("https://opendata.arcgis.com/datasets/ab5661e1a4d74a338ee51cd9533ac787_50.kml",
+                     quiet=TRUE)
+```
+
+
+
+```{r}
+multiple_points_10min_walk <- multiple_points_10min_walk %>%
+  mutate(transit_score = lengths(st_covers(geometry, metrostops)))
+```
+
+
+
+
+
+
+```{r}
+ggplot(multiple_points_10min_walk) +
+  annotation_map_tile(zoomin = 0, type = "stamenbw", progress = "none") +
+  geom_sf(aes(fill=transit_score), alpha=.5) +
+  theme_map()
+```
+
+
+```{r}
+multiple_points_10min_walk2 <- multiple_points_10min_walk %>%
+  mutate(transit_score = lengths(st_covers(geometry, metrostops2)))
+```
+
+
+```{r}
+ggplot(multiple_points_10min_walk2) +
+  annotation_map_tile(zoomin = 0, type = "stamenbw", progress = "none") +
+  geom_sf(aes(fill=transit_score), alpha=.5) +
+  theme_map()
+```
+
+
+
+
+```{r}
+dchoods <- st_read("https://opendata.arcgis.com/datasets/f6c703ebe2534fc3800609a07bad8f5b_17.kml", 
+                  quiet = TRUE) 
+
+dchoods1 <- as(dchoods, "Spatial")
+```
+
+
+
+```{r}
+plot(dchoods1)
+```
+
+
+```{r}
+points1 <-spsample(dchoods1, n=1000, type='regular')
+```
+
+
+
+```{r}
+plot(points1)
+```
+
+
+```{r}
+points1 <- st_as_sf(x = points1,                         
+           coords = coords,
+           crs = 4326)
+```
+
+
+```{r}
+iso_10min_walk1 <- 
+  otp_isochrone(otpcon = otpcon, fromPlace = points1, 
+                mode = "WALK", cutoffSec = 600)
+```
+
+
+
+```{r}
+otp_stop()
+```
+
+
+
+
+```{r}
+iso_10min_walk1 <- iso_10min_walk1 %>%
+  mutate(transit_score = lengths(st_covers(geometry, metrostops)))
+```
+
+
+```{r}
+out <- data.frame(str_split_fixed(iso_10min_walk1$fromPlace, ",", 2))
+
+out <- st_as_sf(x = out,                         
+           coords = c("X2", "X1"),
+           crs = 4326)
+  
+out$transit_score <- iso_10min_walk1$transit_score
+```
+
+
+
+```{r}
+ggplot(dchoods) +
+  geom_sf(fill="NA", color="grey")+
+  geom_sf(data = out, aes(color=transit_score))+
+  scale_color_gradientn(name="Number of Metro stops\nwithin a 10 min walk", colors=c("red", "yellow", "green"))+
+  theme_map()+
+  theme(legend.position = c(.7,0),
+        plot.title = element_text(hjust = 0.5))+
+  labs(title = "Transit Acessibility Map")
+```
+
+
+
+
+
+
+```{r}
+iso_10min_walk2 <- iso_10min_walk1 %>%
+  mutate(transit_score = lengths(st_covers(geometry, metrostops2)))
+```
+
+
+```{r}
+out2 <- data.frame(str_split_fixed(iso_10min_walk2$fromPlace, ",", 2))
+
+out2 <- st_as_sf(x = out,                         
+           coords = c("X2", "X1"),
+           crs = 4326)
+  
+out2$transit_score <- iso_10min_walk2$transit_score
+```
+
+
+
+```{r}
+ggplot(dchoods) +
+  geom_sf(fill="NA", color="grey")+
+  geom_sf(data = out, aes(color=transit_score))+
+  scale_color_gradientn(name="Number of Metro stops\nwithin a 10 min walk", colors=c("red", "yellow", "green"))+
+  theme_map()+
+  theme(legend.position = c(.7,0),
+        plot.title = element_text(hjust = 0.5))+
+  labs(title = "Metro stops Acessibility Map")
+```
+
+
+
+
+
+
+
+```{r}
+metrobusstops <- st_read("https://opendata.arcgis.com/datasets/54018b7f06b943f2af278bbe415df1de_52.kml",
+                     quiet=TRUE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
