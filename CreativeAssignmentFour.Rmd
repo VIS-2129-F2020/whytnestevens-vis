@@ -50,7 +50,7 @@ dc_streets <- dc_street_features$osm_lines %>%
 ```
 
 
-```{r}
+```{r, fig.height=33}
 ggplot(dc_streets) +
   geom_sf() +
   theme_map()
@@ -174,12 +174,58 @@ ggplot(iso_areas,
   theme_solarized() 
 ```
 
+```{r}
+ggplot(iso_areas, 
+       aes(x = as.numeric(walk), y = as.numeric(bike))) +
+  geom_violin() +
+  scale_x_continuous(name = 
+            "Area within a five-minute walking distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(10000, 200000, by = 20000),
+            labels = breaks / 1000000) +
+  scale_y_continuous(name = 
+            "Area within a five-minute biking distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(0, 1400000, by = 100000),
+            labels = breaks / 1000000) +
+  theme_bw()
+```
 
 
+```{r}
+ggplot(iso_areas, 
+       aes(x = as.numeric(walk), y = as.numeric(bike))) +
+  geom_point() +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Area within a five-minute walking distance\nof a farmer's market\n(square km)") +
+  scale_y_continuous(name = "Area within a five-minute biking distance\nof a farmer's market\n(square km)") +
+  theme_solarized() 
+```
 
 
+```{r}
+ggplot(iso_areas, 
+       aes(x = as.numeric(drive), y = as.numeric(bike))) +
+  geom_violin() +
+  scale_x_continuous(name = 
+            "Area within a five-minute driving distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(10000, 2080000, by = 200000),
+            labels = breaks / 1000000) +
+  scale_y_continuous(name = 
+            "Area within a five-minute biking distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(0, 1400000, by = 100000),
+            labels = breaks / 1000000) +
+  theme_bw()
+```
 
 
+```{r}
+ggplot(iso_areas, 
+       aes(x = as.numeric(drive), y = as.numeric(bike))) +
+  geom_point() +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Area within a five-minute driving distance\nof a farmer's market\n(square km)") +
+  scale_y_continuous(name = "Area within a five-minute biking distance\nof a farmer's market\n(square km)") +
+  theme_solarized() 
+```
 
 
 
@@ -343,11 +389,11 @@ out$transit_score <- iso_10min_walk1$transit_score
 
 
 
-```{r}
+```{r, fig.height=7}
 ggplot(dchoods) +
-  geom_sf(fill="NA", color="grey")+
+  geom_sf(fill="gray21", color="ivory4")+
   geom_sf(data = out, aes(color=transit_score))+
-  scale_color_gradientn(name="Number of Metro stops\nwithin a 10 min walk", colors=c("blue", "yellow", "red"))+
+  scale_color_gradientn(name="Number of Metro stops\nwithin a 10 min walk", colors=c("steelblue", "gold", "red"))+
   theme_map()+
   theme(legend.position = c(.7,0),
         plot.title = element_text(hjust = 0.5))+
@@ -395,11 +441,11 @@ out$transit_score2 <- iso_20min_walk$transit_score2
 
 
 
-```{r}
+```{r, fig.height=7}
 ggplot(dchoods) +
-  geom_sf(fill="NA", color="grey")+
+  geom_sf(fill="gray21", color="ivory4")+
   geom_sf(data = out, aes(color=transit_score2))+
-  scale_color_gradientn(name="Number of Metro stops\nwithin a 20 min walk", colors=c("blue", "yellow", "red"))+
+  scale_color_gradientn(name="Number of Metro stops\nwithin a 20 min walk", colors=c("steelblue", "gold", "red"))+
   theme_map()+
   theme(legend.position = c(.7,0),
         plot.title = element_text(hjust = 0.5))+
