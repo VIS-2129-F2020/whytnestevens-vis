@@ -62,7 +62,7 @@ path_otp <- otp_dl_jar("OTP")
 ```
 
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 path_data <- file.path(getwd(), "OTP")
 path_otp <- paste(path_data, "otp.jar",sep = "/")
 
@@ -120,10 +120,68 @@ ggplot(iso_all_modes) +
   coord_sf(xlim = c(left_side, right_side), 
            ylim = c(bottom_side, top_side), expand = FALSE) +
   scale_fill_viridis_d(name = "Area that is reachable within 5 minutes",
-                     labels = c("By car", "By foot", "By bike")) +
+                     labels = c("By foot", "By bike", "By car")) +
   theme_map() +
   labs(caption = "Basemap Copyright OpenStreetMap contributors")
 ```
+
+
+
+
+```{r}
+iso_areas <- iso_all_modes %>%
+  mutate(area = st_area(iso_all_modes)) %>%
+  st_set_geometry(NULL) %>%
+  pivot_wider(names_from = mode, values_from = area) 
+
+ggplot(iso_areas, 
+       aes(x = as.numeric(walk), y = as.numeric(drive))) +
+  geom_point() +
+  scale_x_continuous(name = 
+            "Area within a five-minute walking distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(10000, 130000, by = 20000),
+            labels = breaks / 1000000) +
+  scale_y_continuous(name = 
+            "Area within a five-minute driving distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(0, 1400000, by = 100000),
+            labels = breaks / 1000000) +
+  theme_bw()
+```
+
+```{r}
+ggplot(iso_areas, 
+       aes(x = as.numeric(walk), y = as.numeric(drive))) +
+  geom_violin() +
+  scale_x_continuous(name = 
+            "Area within a five-minute walking distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(10000, 130000, by = 20000),
+            labels = breaks / 1000000) +
+  scale_y_continuous(name = 
+            "Area within a five-minute driving distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(0, 1400000, by = 100000),
+            labels = breaks / 1000000) +
+  theme_bw()
+```
+
+
+```{r}
+ggplot(iso_areas, 
+       aes(x = as.numeric(walk), y = as.numeric(drive))) +
+  geom_point() +
+  stat_smooth(color = "black", linetype = 2, size = 0.5) +
+  scale_x_continuous(name = "Area within a five-minute walking distance\nof a farmer's market\n(square km)") +
+  scale_y_continuous(name = "Area within a five-minute driving distance\nof a farmer's market\n(square km)") +
+  theme_solarized() 
+```
+
+
+
+
+
+
+
+
+
 
 
 # next
@@ -133,14 +191,22 @@ ggplot(iso_all_modes) +
 
 
 ```{r}
-address_list = c("225 7th St SE, Washington, DC", 
+addresslist = c("225 7th St SE, Washington, DC", 
                  "1500 20th St NW, Washington, DC",
                  "901 23rd St NW, Washington, DC",
                  "1300 Pennsylvania Ave NW, Washington, DC")
-points <- geo(address = address_list, mode = "batch") 
+points <- geo(address = addresslist, mode = "batch") 
 head(points)
 ```
 
+
+```{r}
+otp_setup(otp = path_otp, dir = path_data, memory =1024)
+
+#  Connect to opentripplanner
+
+otpcon <- otp_connect()
+```
 
 
 ```{r}
@@ -281,32 +347,50 @@ out$transit_score <- iso_10min_walk1$transit_score
 ggplot(dchoods) +
   geom_sf(fill="NA", color="grey")+
   geom_sf(data = out, aes(color=transit_score))+
-  scale_color_gradientn(name="Number of Metro stops\nwithin a 10 min walk", colors=c("red", "yellow", "green"))+
+  scale_color_gradientn(name="Number of Metro stops\nwithin a 10 min walk", colors=c("blue", "yellow", "red"))+
   theme_map()+
   theme(legend.position = c(.7,0),
         plot.title = element_text(hjust = 0.5))+
   labs(title = "Transit Acessibility Map")
 ```
 
+```{r}
+otp_setup(otp = path_otp, dir = path_data, memory =1024)
 
+#  Connect to opentripplanner
+
+otpcon <- otp_connect()
+```
+
+```{r}
+iso_20min_walk <- 
+  otp_isochrone(otpcon = otpcon, fromPlace = points1, 
+                mode = "WALK", cutoffSec = 1200)
+```
+
+
+
+```{r}
+otp_stop()
+```
 
 
 
 
 ```{r}
-iso_10min_walk2 <- iso_10min_walk1 %>%
-  mutate(transit_score = lengths(st_covers(geometry, metrostops2)))
+iso_20min_walk <- iso_20min_walk %>%
+  mutate(transit_score2 = lengths(st_covers(geometry, metrostops)))
 ```
 
 
 ```{r}
-out2 <- data.frame(str_split_fixed(iso_10min_walk2$fromPlace, ",", 2))
+out <- data.frame(str_split_fixed(iso_20min_walk$fromPlace, ",", 2))
 
-out2 <- st_as_sf(x = out,                         
+out <- st_as_sf(x = out,                         
            coords = c("X2", "X1"),
            crs = 4326)
   
-out2$transit_score <- iso_10min_walk2$transit_score
+out$transit_score2 <- iso_20min_walk$transit_score2
 ```
 
 
@@ -314,18 +398,13 @@ out2$transit_score <- iso_10min_walk2$transit_score
 ```{r}
 ggplot(dchoods) +
   geom_sf(fill="NA", color="grey")+
-  geom_sf(data = out, aes(color=transit_score))+
-  scale_color_gradientn(name="Number of Metro stops\nwithin a 10 min walk", colors=c("red", "yellow", "green"))+
+  geom_sf(data = out, aes(color=transit_score2))+
+  scale_color_gradientn(name="Number of Metro stops\nwithin a 20 min walk", colors=c("blue", "yellow", "red"))+
   theme_map()+
   theme(legend.position = c(.7,0),
         plot.title = element_text(hjust = 0.5))+
-  labs(title = "Metro stops Acessibility Map")
+  labs(title = "Transit Acessibility Map")
 ```
-
-
-
-
-
 
 
 ```{r}
