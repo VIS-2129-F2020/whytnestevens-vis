@@ -11,7 +11,7 @@ output:
 ---
 # Intro/Set Up
 
-For this creative assignment, I was interested in looking at datasets from Chicago First I loaded relevant r libraries as well as other r libraries that might be useful to me later on and pulled a world map using the libraries loaded below.
+For this creative assignment, I picked a dataset plotting all the farmer's markets in the Washington, D.C. city limits. First I loaded relevant r libraries as well as other r libraries that might be useful to me later on. I also loaded the dataset from the DC Open Data Portal. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -31,24 +31,27 @@ library(tidygeocoder)
 ```
 
 
-
 ```{r load farmers markets}
 dcfarmersmarkets<- st_read(
   "https://opendata.arcgis.com/datasets/f2e1c2ef9eb44f2899f4a310a80ecec9_2.kml")
 ```
 
+Next, I defined my coordinate system. Since Washington, D.C.is between Virginia and Maryland, I had to decide which state's coordinate system would be best to use. I settled on the __ coordinate system
 
 ```{r}
-NAD83_Virginia_North <- "+proj=lcc +lat_1=39.2 +lat_2=38.03333333333333 +lat_0=37.66666666666666 +lon_0=-78.5 +x_0=3500000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs"
+MDstateplane <- "+proj=lcc +lat_1=38.3 +lat_2=39.45 +lat_0=37.66666666666666 +lon_0=-77 +x_0=400000 +y_0=0 +ellps=GRS80 +units=m +no_defs"
 
 dc_street_features <- opq(bbox = 'Washington DC USA') %>%
   add_osm_feature(key = 'highway') %>%
   osmdata_sf()
 
 dc_streets <- dc_street_features$osm_lines %>%
-  st_transform(crs = NAD83_Virginia_North)
+  st_transform(crs = MDstateplane)
 ```
 
+
+
+Once defining the coordinate system, I loaded a map with Washington D.C.'s street network and increased the size of the map to better see some of the street grid
 
 ```{r, fig.height=33}
 ggplot(dc_streets) +
@@ -56,13 +59,14 @@ ggplot(dc_streets) +
   theme_map()
 ```
 
+Then I connected to Open Trip Planner
 
 ```{r}
 path_otp <- otp_dl_jar("OTP")
 ```
 
 
-```{r, message = FALSE, warning = FALSE}
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
 path_data <- file.path(getwd(), "OTP")
 path_otp <- paste(path_data, "otp.jar",sep = "/")
 
@@ -78,27 +82,29 @@ otp_setup(otp = path_otp, dir = path_data, memory =1024)
 otpcon <- otp_connect()
 ```
 
+# Creating Isochrones
+## Defining and Mapping Isochrones
 
+After the initial set up, I defined the isochrones for the farmer's markets for the modes of transit I chose which were driving, walking, and biking
 
 
 ```{r}
 iso_5min_walk <- 
   otp_isochrone(otpcon = otpcon, fromPlace = dcfarmersmarkets, 
                 mode = "WALK", cutoffSec = 300) %>%
-  st_transform(crs = NAD83_Virginia_North
-               ) %>%
+  st_transform(crs = MDstateplane) %>%
   mutate(mode = "walk")
 
 iso_5min_drive <- 
   otp_isochrone(otpcon = otpcon, fromPlace = dcfarmersmarkets, 
                 mode = "CAR", cutoffSec = 300) %>%
-  st_transform(crs = NAD83_Virginia_North) %>%
+  st_transform(crs = MDstateplane) %>%
   mutate(mode = "drive")
 
 iso_5min_bike <- 
   otp_isochrone(otpcon = otpcon, fromPlace = dcfarmersmarkets, 
                 mode = "BICYCLE", cutoffSec = 300) %>%
-  st_transform(crs = NAD83_Virginia_North) %>%
+  st_transform(crs = MDstateplane) %>%
   mutate(mode = "bike")
 
 iso_all_modes <- rbind(iso_5min_drive, iso_5min_walk, iso_5min_bike)
@@ -107,7 +113,9 @@ otp_stop()
 ```
 
 
-```{r}
+And here is a map of the isochrones for each of the farmer's markets
+
+```{r, fig.height=11}
 right_side <- st_bbox(iso_all_modes)$xmax
 left_side  <- st_bbox(iso_all_modes)$xmin
 top_side <- st_bbox(iso_all_modes)$ymax
@@ -125,10 +133,11 @@ ggplot(iso_all_modes) +
   labs(caption = "Basemap Copyright OpenStreetMap contributors")
 ```
 
+## Other Ways of Visualizing Results
+From the mapping I did above, I then made some scatter and violin plots to compare each mode of transit to one another
 
 
-
-```{r}
+```{r, fig.height=7}
 iso_areas <- iso_all_modes %>%
   mutate(area = st_area(iso_all_modes)) %>%
   st_set_geometry(NULL) %>%
@@ -145,10 +154,10 @@ ggplot(iso_areas,
             "Area within a five-minute driving distance\nof a farmer's market\n(square km)",
             breaks = breaks <- seq(0, 1400000, by = 100000),
             labels = breaks / 1000000) +
-  theme_bw()
+ theme_solarized()
 ```
 
-```{r}
+```{r, fig.height=7}
 ggplot(iso_areas, 
        aes(x = as.numeric(walk), y = as.numeric(drive))) +
   geom_violin() +
@@ -160,21 +169,26 @@ ggplot(iso_areas,
             "Area within a five-minute driving distance\nof a farmer's market\n(square km)",
             breaks = breaks <- seq(0, 1400000, by = 100000),
             labels = breaks / 1000000) +
-  theme_bw()
+  theme_solarized()
 ```
 
 
-```{r}
+```{r, fig.height=7}
 ggplot(iso_areas, 
-       aes(x = as.numeric(walk), y = as.numeric(drive))) +
+       aes(x = as.numeric(walk), y = as.numeric(bike))) +
   geom_point() +
-  stat_smooth(color = "black", linetype = 2, size = 0.5) +
-  scale_x_continuous(name = "Area within a five-minute walking distance\nof a farmer's market\n(square km)") +
-  scale_y_continuous(name = "Area within a five-minute driving distance\nof a farmer's market\n(square km)") +
-  theme_solarized() 
+  scale_x_continuous(name = 
+            "Area within a five-minute walking distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(10000, 180000, by = 20000),
+            labels = breaks / 1000000) +
+  scale_y_continuous(name = 
+            "Area within a five-minute biking distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(0, 1800000, by = 100000),
+            labels = breaks / 1000000) +
+ theme_solarized()
 ```
 
-```{r}
+```{r, fig.height=7}
 ggplot(iso_areas, 
        aes(x = as.numeric(walk), y = as.numeric(bike))) +
   geom_violin() +
@@ -186,22 +200,27 @@ ggplot(iso_areas,
             "Area within a five-minute biking distance\nof a farmer's market\n(square km)",
             breaks = breaks <- seq(0, 1400000, by = 100000),
             labels = breaks / 1000000) +
-  theme_bw()
+  theme_solarized()
 ```
 
 
-```{r}
+```{r, fig.height=7}
 ggplot(iso_areas, 
-       aes(x = as.numeric(walk), y = as.numeric(bike))) +
+       aes(x = as.numeric(drive), y = as.numeric(bike))) +
   geom_point() +
-  stat_smooth(color = "black", linetype = 2, size = 0.5) +
-  scale_x_continuous(name = "Area within a five-minute walking distance\nof a farmer's market\n(square km)") +
-  scale_y_continuous(name = "Area within a five-minute biking distance\nof a farmer's market\n(square km)") +
-  theme_solarized() 
+  scale_x_continuous(name = 
+            "Area within a five-minute driving distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(10000, 2000000, by = 200000),
+            labels = breaks / 1000000) +
+  scale_y_continuous(name = 
+            "Area within a five-minute biking distance\nof a farmer's market\n(square km)",
+            breaks = breaks <- seq(0, 1400000, by = 100000),
+            labels = breaks / 1000000) +
+ theme_solarized() 
 ```
 
 
-```{r}
+```{r, fig.height=7}
 ggplot(iso_areas, 
        aes(x = as.numeric(drive), y = as.numeric(bike))) +
   geom_violin() +
@@ -213,26 +232,18 @@ ggplot(iso_areas,
             "Area within a five-minute biking distance\nof a farmer's market\n(square km)",
             breaks = breaks <- seq(0, 1400000, by = 100000),
             labels = breaks / 1000000) +
-  theme_bw()
+  theme_solarized()
 ```
 
 
-```{r}
-ggplot(iso_areas, 
-       aes(x = as.numeric(drive), y = as.numeric(bike))) +
-  geom_point() +
-  stat_smooth(color = "black", linetype = 2, size = 0.5) +
-  scale_x_continuous(name = "Area within a five-minute driving distance\nof a farmer's market\n(square km)") +
-  scale_y_continuous(name = "Area within a five-minute biking distance\nof a farmer's market\n(square km)") +
-  theme_solarized() 
-```
+Based on these plots, it seems that the area within a five minute walking, driving, or biking distance from most of the farmer's markets is between 0.5 and 0.8 square km
 
 
+# Looking at Isochrones for Select Farmer's Market Locations
 
+## Selecting Famrer's Markets Locations
 
-# next
-
-
+I futher wanted to look at these isochrones on a closer scale, so I picked four of the farmer's markets based on some of the museums and places in Washington D.C. I'm familiar with - the Library of Congress, the Smithsonian, Howard University, and DuPont Circle:
 
 
 
@@ -245,6 +256,8 @@ points <- geo(address = addresslist, mode = "batch")
 head(points)
 ```
 
+
+As with the initial isochrone map I made, I connected to Open Trip Planner Again
 
 ```{r}
 otp_setup(otp = path_otp, dir = path_data, memory =1024)
@@ -268,7 +281,11 @@ multiple_points_10min_walk <-
 ```
 
 
-```{r}
+
+
+And mapped the isochrone for a 10 min walk only to these farmer's market locations
+
+```{r, fig.height=7}
 ggplot(multiple_points_10min_walk) +
   annotation_map_tile(zoomin = 0, type = "stamenbw", progress = "none") +
   geom_sf(fill ="orange", alpha=0.2) +
@@ -277,14 +294,11 @@ ggplot(multiple_points_10min_walk) +
 
 
 
+
+I also mapped the transit score for each of these farmer's markets, using a dataset with all of the locations of DC Metro train stations
+
 ```{r}
 metrostops <- st_read("https://opendata.arcgis.com/datasets/54018b7f06b943f2af278bbe415df1de_52.kml",
-                     quiet=TRUE)
-```
-
-
-```{r}
-metrostops2 <- st_read("https://opendata.arcgis.com/datasets/ab5661e1a4d74a338ee51cd9533ac787_50.kml",
                      quiet=TRUE)
 ```
 
@@ -299,8 +313,10 @@ multiple_points_10min_walk <- multiple_points_10min_walk %>%
 
 
 
+Here is the resulting map:
 
-```{r}
+
+```{r, fig.height=7}
 ggplot(multiple_points_10min_walk) +
   annotation_map_tile(zoomin = 0, type = "stamenbw", progress = "none") +
   geom_sf(aes(fill=transit_score), alpha=.5) +
@@ -308,20 +324,18 @@ ggplot(multiple_points_10min_walk) +
 ```
 
 
-```{r}
-multiple_points_10min_walk2 <- multiple_points_10min_walk %>%
-  mutate(transit_score = lengths(st_covers(geometry, metrostops2)))
-```
+It seems that the Capital Harvest on the Plaza farmer's market, located at 1300 Pennsylvania Ave NW, has the best transit score of all the markets I chose to map, while the other 3 locations have a similar transit score
 
 
-```{r}
-ggplot(multiple_points_10min_walk2) +
-  annotation_map_tile(zoomin = 0, type = "stamenbw", progress = "none") +
-  geom_sf(aes(fill=transit_score), alpha=.5) +
-  theme_map()
-```
 
 
+# Experimenting with Geocoding
+
+Last but not least, I wanted to try creating some of the visualizations in the Geocoding tutorial. 
+
+## Set Up
+
+First I loaded a dataset of Washington D.C.neighborhoods, as defined by the planning authority there
 
 
 ```{r}
@@ -333,10 +347,14 @@ dchoods1 <- as(dchoods, "Spatial")
 
 
 
-```{r}
+```{r, fig.height=7}
 plot(dchoods1)
 ```
 
+
+
+
+Then created the 1000 dot grid
 
 ```{r}
 points1 <-spsample(dchoods1, n=1000, type='regular')
@@ -344,7 +362,7 @@ points1 <-spsample(dchoods1, n=1000, type='regular')
 
 
 
-```{r}
+```{r, fig.height=7}
 plot(points1)
 ```
 
@@ -355,6 +373,9 @@ points1 <- st_as_sf(x = points1,
            crs = 4326)
 ```
 
+
+
+And then plotted how many transots stops are within a 10 minute walk
 
 ```{r}
 iso_10min_walk1 <- 
@@ -387,18 +408,23 @@ out <- st_as_sf(x = out,
 out$transit_score <- iso_10min_walk1$transit_score
 ```
 
-
+## Initial Results
 
 ```{r, fig.height=7}
 ggplot(dchoods) +
-  geom_sf(fill="gray21", color="ivory4")+
+  geom_sf(fill="gray32", color="gray60")+
   geom_sf(data = out, aes(color=transit_score))+
-  scale_color_gradientn(name="Number of Metro stops\nwithin a 10 min walk", colors=c("steelblue", "gold", "red"))+
+  scale_color_gradientn(name="Number of Metro stops\nwithin a 10 min walk", colors=c("orangered", "yellow", "lawngreen"))+
   theme_map()+
   theme(legend.position = c(.7,0),
         plot.title = element_text(hjust = 0.5))+
   labs(title = "Transit Acessibility Map")
 ```
+
+
+
+
+As you can see from the map above, for large parts of the city there are little to no metro stops within a 10 min walk for most people, with the exception of the city center, where many of the jobs and actvity are located. Surprised by this I then repeated this same process but for a 20 min walk instead
 
 ```{r}
 otp_setup(otp = path_otp, dir = path_data, memory =1024)
@@ -443,9 +469,9 @@ out$transit_score2 <- iso_20min_walk$transit_score2
 
 ```{r, fig.height=7}
 ggplot(dchoods) +
-  geom_sf(fill="gray21", color="ivory4")+
+  geom_sf(fill="gray32", color="gray60")+
   geom_sf(data = out, aes(color=transit_score2))+
-  scale_color_gradientn(name="Number of Metro stops\nwithin a 20 min walk", colors=c("steelblue", "gold", "red"))+
+  scale_color_gradientn(name="Number of Metro stops\nwithin a 20 min walk", colors=c("orangered", "yellow", "lawngreen"))+
   theme_map()+
   theme(legend.position = c(.7,0),
         plot.title = element_text(hjust = 0.5))+
@@ -453,14 +479,10 @@ ggplot(dchoods) +
 ```
 
 
-```{r}
-metrobusstops <- st_read("https://opendata.arcgis.com/datasets/54018b7f06b943f2af278bbe415df1de_52.kml",
-                     quiet=TRUE)
-```
 
 
 
-
+The results for this map are better in terms of transit accessibility. However, it's still a concern that most people would have to walk 20 min to access a Metro stop therefore showing that parts of the DC Metro tranist system are unaccesible to those outside of the city center
 
 
 
