@@ -1,0 +1,95 @@
+---
+title: "CreativeAssignment6"
+author: "Whytne Stevens"
+date: "10/23/2020"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r load libraries, results = "hide", message = FALSE, warning = FALSE}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+```
+
+## Murals in Chicago
+
+You can also embed plots, for example:
+
+```{r load data, echo = FALSE}
+muralschi <-st_read("https://data.cityofchicago.org/api/geospatial/we8h-apcf?method=export&format=GeoJSON")
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r}
+muralschi$describe <- 
+  paste(muralschi$artwork_title, "<br>", 
+        muralschi$artist_credit, "<br>",
+        muralschi$year_installed, "<br>",
+        muralschi$street_address, "<br>") %>% 
+  lapply(htmltools::HTML)
+
+muralschimap <- leaflet(muralschi) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addCircles(fillColor = "tomato", color = "tomato", 
+             stroke = FALSE, radius = 100,
+              highlightOptions = highlightOptions(fillColor = "tomato", 
+                                                  fillOpacity = 1),
+              popup = ~describe) %>%
+  addControl("Mural Locations in Chicago", position = "topright") %>%
+  addControl('<a href="https://data.cityofchicago.org/Historic-Preservation/Mural-Registry/we8h-apcf">Data source</a>',
+             position = "bottomleft")
+
+muralschimap
+```
+
+
+## TIF Districts in Chicago
+
+
+```{r load data, echo = FALSE}
+tifdistrictschi <-st_read("https://data.cityofchicago.org/api/geospatial/fz5x-7zak?method=export&format=GeoJSON")
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r}
+tifdistrictschi$describe <- 
+  paste(tifdistrictschi$name, "<br>", 
+        tifdistrictschi$use, "<br>",
+        tifdistrictschi$wards, "<br>") %>% 
+  lapply(htmltools::HTML)
+
+tifdistrictschimap <- leaflet(tifdistrictschi) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addPolygons(fillColor = "blue", stroke = FALSE,
+              highlightOptions = highlightOptions(fillColor = "darkblue", 
+                                                  fillOpacity = 1),
+              label = ~describe) %>%
+  addControl("TIF Districts in Chicago", position = "topright") %>%
+  addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Boundaries-Tax-Increment-Financing-Districts/fz5x-7zak#revert">Data source</a>',
+             position = "bottomleft")
+
+tifdistrictschimap
+```
+
+
+```{r}
+saveWidget(muralschimap, file = "chicagomurals.html")
+saveWidget(tifdistrictschimap, file = "chicagotifs.html")
+```
+
