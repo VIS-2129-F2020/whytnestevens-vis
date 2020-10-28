@@ -23,11 +23,30 @@ library(htmltools)
 library(htmlwidgets)
 ```
 
+
+
+```{r load data, echo = FALSE}
+commareaschi <-st_read("https://data.cityofchicago.org/api/geospatial/cauq-8yn6?method=export&format=GeoJSON")
+```
+
+```{r load chicago city boundary data, echo = FALSE}
+cityboundarychi <-st_read("https://data.cityofchicago.org/api/geospatial/ewy2-6yfk?method=export&format=GeoJSON")
+```
+
+```{r}
+commareaschi$describe <- 
+  paste("Community Area Name:", commareaschi$community, "<br>", 
+        "Community Area Number:", commareaschi$area_numbe, "<br>") %>% 
+  lapply(htmltools::HTML)
+```
+
+
+
 ## Murals in Chicago
 
 You can also embed plots, for example:
 
-```{r load data, echo = FALSE}
+```{r load chicago mural data, echo = FALSE}
 muralschi <-st_read("https://data.cityofchicago.org/api/geospatial/we8h-apcf?method=export&format=GeoJSON")
 ```
 
@@ -36,31 +55,88 @@ Note that the `echo = FALSE` parameter was added to the code chunk to prevent pr
 
 ```{r}
 muralschi$describe <- 
-  paste(muralschi$artwork_title, "<br>", 
-        muralschi$artist_credit, "<br>",
-        muralschi$year_installed, "<br>",
-        muralschi$street_address, "<br>") %>% 
+  paste("Title:", muralschi$artwork_title, "<br>", 
+        "Artist:", muralschi$artist_credit, "<br>",
+        "Year:", muralschi$year_installed, "<br>",
+        "Location:", muralschi$street_address, "<br>") %>% 
   lapply(htmltools::HTML)
 
 muralschimap <- leaflet(muralschi) %>%
   addProviderTiles(providers$Stamen.Toner) %>%
   addCircles(fillColor = "tomato", color = "tomato", 
-             stroke = FALSE, radius = 100,
-              highlightOptions = highlightOptions(fillColor = "tomato", 
+             stroke = FALSE, radius = 175,
+              highlightOptions = highlightOptions(fillColor = "lawngreen", 
                                                   fillOpacity = 1),
               popup = ~describe) %>%
   addControl("Mural Locations in Chicago", position = "topright") %>%
   addControl('<a href="https://data.cityofchicago.org/Historic-Preservation/Mural-Registry/we8h-apcf">Data source</a>',
-             position = "bottomleft")
-
+             position = "bottomleft") %>%
+  setMaxBounds( lng1 = -87.940101,
+                lat1 = 41.643919,
+                lng2 = -87.523984,
+                lat2 = 42.098388)
 muralschimap
 ```
 
 
+```{r}
+muralschimap2 <- leaflet(cityboundarychi) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addPolylines(data = cityboundarychi, stroke = T,
+               color = "turquoise", 
+               opacity = 1,
+               weight = 3)  %>%
+  addCircleMarkers(data= muralschi, 
+             fill = TRUE,
+             radius = 10,
+             color = "lawngreen",
+             fillOpacity = 0.5, 
+             stroke = FALSE,
+             label = ~ describe,
+             clusterOptions = markerClusterOptions()) %>%
+  addControl("Mural Locations in Chicago", position = "topright") %>%
+  addControl('<a href="https://data.cityofchicago.org/Historic-Preservation/Mural-Registry/we8h-apcf">Data source</a>',
+             position = "bottomleft") %>%
+  setMaxBounds( lng1 = -87.940101,
+                lat1 = 41.643919,
+                lng2 = -87.523984,
+                lat2 = 42.098388)
+muralschimap2
+```
+
+
+
+```{r}
+muralschimap3 <- leaflet(commareaschi) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addPolygons(fillColor = "turquoise", stroke = FALSE,
+              label = ~describe) %>%
+    addPolylines(data = commareaschi, stroke = T, 
+               color = "turquoise", 
+               opacity = 1,
+               weight = 1.25) %>%
+addCircleMarkers(data= muralschi, 
+             fill = TRUE,
+             radius = 10,
+             color = "tomato",
+             fillOpacity = 0.5, 
+             stroke = FALSE,
+             label = ~ describe,
+             clusterOptions = markerClusterOptions()) %>%
+  addControl("Mural Locations in Chicago", position = "topright") %>%
+  addControl('<a href="https://data.cityofchicago.org/Historic-Preservation/Mural-Registry/we8h-apcf">Data source</a>',
+             position = "bottomleft") %>%
+  setMaxBounds( lng1 = -87.940101,
+                lat1 = 41.643919,
+                lng2 = -87.523984,
+                lat2 = 42.098388)
+
+muralschimap3
+```
 ## TIF Districts in Chicago
 
 
-```{r load data, echo = FALSE}
+```{r load chicago tif data, echo = FALSE}
 tifdistrictschi <-st_read("https://data.cityofchicago.org/api/geospatial/fz5x-7zak?method=export&format=GeoJSON")
 ```
 
@@ -69,27 +145,58 @@ Note that the `echo = FALSE` parameter was added to the code chunk to prevent pr
 
 ```{r}
 tifdistrictschi$describe <- 
-  paste(tifdistrictschi$name, "<br>", 
-        tifdistrictschi$use, "<br>",
-        tifdistrictschi$wards, "<br>") %>% 
+  paste("Name of TIF:", tifdistrictschi$name, "<br>", 
+        "TIF Use", tifdistrictschi$use, "<br>",
+        "Community Areas for TIF:", tifdistrictschi$comm_area, "<br>") %>% 
   lapply(htmltools::HTML)
 
 tifdistrictschimap <- leaflet(tifdistrictschi) %>%
   addProviderTiles(providers$Stamen.Toner) %>%
   addPolygons(fillColor = "blue", stroke = FALSE,
-              highlightOptions = highlightOptions(fillColor = "darkblue", 
+              highlightOptions = highlightOptions(fillColor = "orange", 
                                                   fillOpacity = 1),
               label = ~describe) %>%
-  addControl("TIF Districts in Chicago", position = "topright") %>%
+  addControl("Tax Increment Financing (TIF) Districts in Chicago", position = "topright") %>%
   addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Boundaries-Tax-Increment-Financing-Districts/fz5x-7zak#revert">Data source</a>',
-             position = "bottomleft")
+             position = "bottomleft") %>%
+  setMaxBounds( lng1 = -87.805388,
+                lat1 = 41.609952,
+                lng2 = -87.461107,
+                lat2 = 42.027398)
 
 tifdistrictschimap
+```
+
+```{r}
+tifdistrictschimap2 <- leaflet(commareaschi) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addPolygons(fillColor = "orange", stroke = FALSE,
+              label = ~describe) %>%
+    addPolylines(data = commareaschi, stroke = T, 
+               color = "orange", 
+               opacity = 1,
+               weight = 1.5) %>%
+   addPolygons(data = tifdistrictschi,
+               fillColor = "blue", fillOpacity = 0.5, stroke = FALSE,
+              highlightOptions = highlightOptions(fillColor = "blue", 
+                                                  fillOpacity = 3),
+              label = ~describe) %>%
+  addControl("Tax Increment Financing (TIF) Districts in Chicago", position = "topright") %>%
+  addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Boundaries-Tax-Increment-Financing-Districts/fz5x-7zak#revert">Data source</a>',
+             position = "bottomleft") %>%
+  setMaxBounds( lng1 = -87.805388,
+                lat1 = 41.609952,
+                lng2 = -87.461107,
+                lat2 = 42.027398)
+
+tifdistrictschimap2
 ```
 
 
 ```{r}
 saveWidget(muralschimap, file = "chicagomurals.html")
 saveWidget(tifdistrictschimap, file = "chicagotifs.html")
+saveWidget(muralschimap2, file = "chicagomurals2.html")
+saveWidget(tifdistrictschimap2, file = "chicagotifs2.html")
+saveWidget(muralschimap3, file = "chicagomurals3.html")
 ```
-
