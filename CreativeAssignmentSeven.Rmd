@@ -1,0 +1,159 @@
+---
+title: "CreativeAssignmentSeven"
+author: "Whytne Stevens"
+date: "10/29/2020"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r load libraries, results = "hide", message = FALSE, warning = FALSE}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+library(raster)
+library(gstat)
+library(spatial)
+```
+
+
+
+
+```{r load data, echo = FALSE}
+commareaschi <-st_read("https://data.cityofchicago.org/api/geospatial/cauq-8yn6?method=export&format=GeoJSON", quiet = TRUE) %>%
+  dplyr::select(community)
+
+```
+
+```{r load chicago city boundary data, echo = FALSE}
+cityboundarychi <-st_read("https://data.cityofchicago.org/api/geospatial/ewy2-6yfk?method=export&format=GeoJSON")
+```
+
+
+```{r load chicago mural data, echo = FALSE}
+muralschi <-st_read("https://data.cityofchicago.org/api/geospatial/we8h-apcf?method=export&format=GeoJSON")
+```
+
+
+
+```{r}
+leaflet(commareaschi) %>%
+  addProviderTiles(providers$Stamen.TonerLite) %>%
+  addPolygons(highlightOptions = highlightOptions(fillColor = "yellow", 
+                                                  fillOpacity = 1),
+              label = ~community, 
+              weight = 1) 
+```
+
+
+
+```{r}
+commareaschi <- commareaschi %>%
+  mutate(affordhousingchi = c(1556, 1844, 200, 4402, 240, 34, 1444, 218, 1418, 1034, 146, 0, 760, 466, 200, 102, 258, 34, 522, 620, 0, 64, 746, 1654, 956, 1208, 1254, 1650, 2456, 2114, 2084, 78, 702, 2294, 0, 168, 1364, 32, 824, 324, 204, 614, 0, 0, 580, 0, 832, 124, 420, 172, 0, 404, 150, 232, 344, 0, 60, 170, 672, 156, 118, 0, 178, 682, 168, 1368, 48, 0, 170, 812, 0, 284, 0, 0, 0, 1008, 0))
+
+
+commareaschi$label <- 
+  paste("Community Area Name:", commareaschi$community, "<br>", 
+        "Number of Affordable Housing Units:", commareaschi$affordhousingchi, "<br>") %>% 
+  lapply(htmltools::HTML)
+
+bins <- seq(min(commareaschi$affordhousingchi),
+            max(commareaschi$affordhousingchi))
+pal <- colorNumeric("viridis", 
+                    domain = commareaschi$affordhousingchi,
+                    na.color = "#00000000")
+
+leaflet(commareaschi) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addPolygons(highlightOptions = highlightOptions(fillOpacity = 1),
+              label = ~label,
+              fillColor = ~pal(affordhousingchi),
+              weight = 1, color = "black") %>% 
+  addLegend(pal = pal, 
+            values = ~affordhousingchi,
+            bins = 5,
+            opacity = 100, title = "Number of Affordable Housing Units by Community Area",
+            position = "topright")%>%
+  addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Affordable-Housing-Units-by-Community-Area/yvj4-y3fb">Data source</a>',
+             position = "bottomleft")
+```
+
+
+```{r}
+ILstateplaneeast <- "+proj=tmerc +lat_0=36.66666666666666 +lon_0=-88.33333333333333 +k=0.9999749999999999 +x_0=300000 +y_0=0 +ellps=GRS80 +units=m +no_defs"
+
+WGS84 <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+
+commareaspoints <- st_centroid(
+  st_transform(commareaschi, crs = ILstateplaneeast)) %>%
+  st_transform(WGS84)
+
+leaflet(commareaspoints) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addCircles(label = ~label,
+             fillColor = ~pal(affordhousingchi),
+             stroke = FALSE, 
+             radius = 50, 
+             fillOpacity = 1) %>% 
+  addLegend(pal = pal, 
+            values = ~affordhousingchi,
+            bins = 3,
+            opacity = 0.7, title = "Number of Affordable Housing Units by Community Area",
+            position = "topright")%>%
+  addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Affordable-Housing-Units-by-Community-Area/yvj4-y3fb">Data source</a>',
+             position = "bottomleft")
+```
+
+
+```{r}
+commareas_ptssp <- commareaspoints %>%
+  st_transform(ILstateplaneeast) %>%
+  as_Spatial()
+
+commareas_polysp <- commareaschi %>%
+  st_transform(ILstateplaneeast) %>%
+  as_Spatial()
+```
+
+
+```{r}
+chicagoraster <- raster(commareas_polysp, res=10)
+```
+
+
+```{r}
+gs <- gstat(formula=affordhousingchi~1, locations=commareas_ptssp)
+idw_interp <- interpolate(chicagoraster, gs)
+
+idw_interp_clip <- mask(idw_interp, commareas_polysp)
+```
+
+
+```{r}
+leaflet(commareaspoints) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addRasterImage(idw_interp_clip, colors = pal, opacity = 0.8) %>% 
+  addLegend(pal = pal, 
+            values = ~affordhousingchi,
+            bins = 10,
+            opacity = 0.7, title = "Estimated Number of Affordable \nHousing Units by Community Area",
+            position = "topright")%>%
+  addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Affordable-Housing-Units-by-Community-Area/yvj4-y3fb">Data source</a>',
+             position = "bottomleft")
+```
+
+
+
+
+
+

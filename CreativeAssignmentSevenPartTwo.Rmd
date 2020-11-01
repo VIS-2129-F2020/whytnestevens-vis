@@ -1,0 +1,168 @@
+---
+title: "CreativeAssignmentSevenPartTwo"
+author: "Whytne Stevens"
+date: "11/01/2020"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r load libraries, results = "hide", message = FALSE, warning = FALSE}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+library(raster)
+library(gstat)
+library(spatial)
+```
+
+
+
+
+```{r load data, echo = FALSE}
+commareaschi <-st_read("https://data.cityofchicago.org/api/geospatial/cauq-8yn6?method=export&format=GeoJSON", quiet = TRUE) %>%
+  dplyr::select(community)
+
+```
+
+```{r load chicago city boundary data, echo = FALSE}
+cityboundarychi <-st_read("https://data.cityofchicago.org/api/geospatial/ewy2-6yfk?method=export&format=GeoJSON")
+```
+
+
+```{r load chicago mural data, echo = FALSE}
+muralschi <-st_read("https://data.cityofchicago.org/api/geospatial/we8h-apcf?method=export&format=GeoJSON")
+```
+
+
+
+```{r}
+leaflet(commareaschi) %>%
+  addProviderTiles(providers$Stamen.TonerLite) %>%
+  addPolygons(highlightOptions = highlightOptions(fillColor = "yellow", 
+                                                  fillOpacity = 1),
+              label = ~community, 
+              weight = 1) 
+```
+
+
+
+```{r}
+commareaschi <- commareaschi %>%
+  mutate(grocerystoreschi = c(2, 0, 1, 4, 4, 4, 3, 3, 5, 13, 3, 2, 2, 12, 10, 7, 9, 1, 22, 18, 7, 6, 15, 16, 14, 14, 7, 3, 9, 4, 15, 22, 11, 2, 4, 4, 17, 4, 7, 6, 3, 5, 0, 4, 9, 2, 7, 6, 2, 4, 3, 5, 2, 3, 4, 4, 10, 2, 17, 3, 5, 1, 4, 12, 11, 8, 7, 11, 3, 11, 1, 2, 3, 7, 1, 11, 1))
+
+
+commareaschi$label <- 
+  paste("Community Area Name:", commareaschi$community, "<br>", 
+        "Number of Grocery Stores:", commareaschi$grocerystoreschi, "<br>") %>% 
+  lapply(htmltools::HTML)
+
+bins <- seq(min(commareaschi$grocerystoreschi),
+            max(commareaschi$grocerystoreschi))
+pal <- colorNumeric("viridis", 
+                    domain = commareaschi$grocerystoreschi,
+                    na.color = "#00000000")
+
+leaflet(commareaschi) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addPolygons(highlightOptions = highlightOptions(fillOpacity = 1),
+              label = ~label,
+              fillColor = ~pal(grocerystoreschi),
+              weight = 1, color = "black") %>% 
+  addLegend(pal = pal, 
+            values = ~grocerystoreschi,
+            bins = 5,
+            opacity = 100, title = "Number of Grocery Stores by Community Area",
+            position = "topright")%>%
+  addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Grocery-Stores-2013/53t8-wyrc">Data source</a>',
+             position = "bottomleft")
+```
+
+
+
+```{r}
+ILstateplaneeast <- "+proj=tmerc +lat_0=36.66666666666666 +lon_0=-88.33333333333333 +k=0.9999749999999999 +x_0=300000 +y_0=0 +ellps=GRS80 +units=m +no_defs"
+
+WGS84 <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+
+commareaspoints <- st_centroid(
+  st_transform(commareaschi, crs = ILstateplaneeast)) %>%
+  st_transform(WGS84)
+
+leaflet(commareaspoints) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addCircles(label = ~label,
+             fillColor = ~pal(grocerystoreschi),
+             stroke = FALSE, 
+             radius = 50, 
+             fillOpacity = 1) %>% 
+  addLegend(pal = pal, 
+            values = ~grocerystoreschi,
+            bins = 5,
+            opacity = 0.7, title = "Number of Grocery Stores by Community Area",
+            position = "topright")%>%
+  addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Grocery-Stores-2013/53t8-wyrc">Data source</a>',
+             position = "bottomleft")
+```
+
+
+```{r}
+commareas_ptssp <- commareaspoints %>%
+  st_transform(ILstateplaneeast) %>%
+  as_Spatial()
+
+commareas_polysp <- commareaschi %>%
+  st_transform(ILstateplaneeast) %>%
+  as_Spatial()
+```
+
+
+```{r}
+chicagoraster <- raster(commareas_polysp, res=10)
+```
+
+
+```{r}
+gs <- gstat(formula=grocerystoreschi~1, locations=commareas_ptssp)
+idw_interp <- interpolate(chicagoraster, gs)
+
+idw_interp_clip <- mask(idw_interp, commareas_polysp)
+```
+
+
+```{r}
+chigrocerystores <- leaflet(commareaspoints) %>%
+  addProviderTiles(providers$Stamen.Toner) %>%
+  addRasterImage(idw_interp_clip, colors = pal, opacity = 0.8) %>% 
+  addLegend(pal = pal, 
+            values = ~grocerystoreschi,
+            bins = 5,
+            opacity = 0.7, title = "Estimated Number of \nGrocery Stores \nby Community Area",
+            position = "topright")%>%
+  addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Grocery-Stores-2013/53t8-wyrc">Data source</a>',
+             position = "bottomleft")
+chigrocerystores
+```
+
+```{r}
+saveWidget(chigrocerystores, file = "chigrocerystores.html")
+```
+
+
+
+
+
+
+
+
+
