@@ -14,6 +14,10 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Intro and Set Up
+
+For this assignment, I decided to map grocery stores in Chicago by community area (what the City of Chicago formally calls their neighborhoods). Here, I loaded the relevant r libraries needed for this assignment as well as a dataset for the community areas in Chicago
+
 
 ```{r load libraries, results = "hide", message = FALSE, warning = FALSE}
 library(tidyverse)
@@ -28,23 +32,14 @@ library(spatial)
 
 
 
-
 ```{r load data, echo = FALSE}
 commareaschi <-st_read("https://data.cityofchicago.org/api/geospatial/cauq-8yn6?method=export&format=GeoJSON", quiet = TRUE) %>%
   dplyr::select(community)
 
 ```
 
-```{r load chicago city boundary data, echo = FALSE}
-cityboundarychi <-st_read("https://data.cityofchicago.org/api/geospatial/ewy2-6yfk?method=export&format=GeoJSON")
-```
 
-
-```{r load chicago mural data, echo = FALSE}
-muralschi <-st_read("https://data.cityofchicago.org/api/geospatial/we8h-apcf?method=export&format=GeoJSON")
-```
-
-
+I then loaded a map of the community areas with their boundaries
 
 ```{r}
 leaflet(commareaschi) %>%
@@ -52,16 +47,26 @@ leaflet(commareaschi) %>%
   addPolygons(highlightOptions = highlightOptions(fillColor = "yellow", 
                                                   fillOpacity = 1),
               label = ~community, 
-              weight = 1) 
+              weight = 1) %>%
+  setMaxBounds( lng1 = -87.940101,
+                lat1 = 41.643919,
+                lng2 = -87.523984,
+                lat2 = 42.098388) 
 ```
 
-
+Since I couldn't find a GEOJSON file for the grocery stores in Chicago, I had to manually enter them in by tallying how many grocery stores were in each community area and then mutated the community area dataset to include the grocery store count for each community area.
 
 ```{r}
 commareaschi <- commareaschi %>%
   mutate(grocerystoreschi = c(2, 0, 1, 4, 4, 4, 3, 3, 5, 13, 3, 2, 2, 12, 10, 7, 9, 1, 22, 18, 7, 6, 15, 16, 14, 14, 7, 3, 9, 4, 15, 22, 11, 2, 4, 4, 17, 4, 7, 6, 3, 5, 0, 4, 9, 2, 7, 6, 2, 4, 3, 5, 2, 3, 4, 4, 10, 2, 17, 3, 5, 1, 4, 12, 11, 8, 7, 11, 3, 11, 1, 2, 3, 7, 1, 11, 1))
+```
 
 
+# Chloropleth Map
+
+After adding the grocery store data, I then loaded a chloropleth map of this data
+
+```{r}
 commareaschi$label <- 
   paste("Community Area Name:", commareaschi$community, "<br>", 
         "Number of Grocery Stores:", commareaschi$grocerystoreschi, "<br>") %>% 
@@ -82,13 +87,21 @@ leaflet(commareaschi) %>%
   addLegend(pal = pal, 
             values = ~grocerystoreschi,
             bins = 5,
-            opacity = 100, title = "Number of Grocery Stores by Community Area",
+            opacity = 150, title = "Number of Grocery Stores by Community Area",
             position = "topright")%>%
   addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Grocery-Stores-2013/53t8-wyrc">Data source</a>',
-             position = "bottomleft")
+             position = "bottomleft") %>%
+  setMaxBounds( lng1 = -87.940101,
+                lat1 = 41.643919,
+                lng2 = -87.523984,
+                lat2 = 42.098388)
 ```
 
+From this map, we can see that community areas on the North Side of Chicago, Downtown, and the community areas near downtown have at least 10 grocery stores, with some having 20 or more. This is in contrast to the SOuth and West Sides, where the community areas in those parts of the city have 5 or less grocery stores in each community area
 
+# Centroid Point Map
+
+Next, I wanted to make an interpolated map but before I could do that, I had to convert my polygons to points, specifically centroids. So I made a map of that as well
 
 ```{r}
 ILstateplaneeast <- "+proj=tmerc +lat_0=36.66666666666666 +lon_0=-88.33333333333333 +k=0.9999749999999999 +x_0=300000 +y_0=0 +ellps=GRS80 +units=m +no_defs"
@@ -104,7 +117,7 @@ leaflet(commareaspoints) %>%
   addCircles(label = ~label,
              fillColor = ~pal(grocerystoreschi),
              stroke = FALSE, 
-             radius = 50, 
+             radius = 500, 
              fillOpacity = 1) %>% 
   addLegend(pal = pal, 
             values = ~grocerystoreschi,
@@ -112,9 +125,18 @@ leaflet(commareaspoints) %>%
             opacity = 0.7, title = "Number of Grocery Stores by Community Area",
             position = "topright")%>%
   addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Grocery-Stores-2013/53t8-wyrc">Data source</a>',
-             position = "bottomleft")
+             position = "bottomleft") %>%
+  setMaxBounds( lng1 = -87.940101,
+                lat1 = 41.643919,
+                lng2 = -87.523984,
+                lat2 = 42.098388)
 ```
 
+The points also show the same trends as in the original chloropleth map
+
+# Interpolated Map
+
+After converting my polygons to points, I then transformed both and rasterized those transformations to create an interpolated map.
 
 ```{r}
 commareas_ptssp <- commareaspoints %>%
@@ -139,7 +161,7 @@ idw_interp <- interpolate(chicagoraster, gs)
 idw_interp_clip <- mask(idw_interp, commareas_polysp)
 ```
 
-
+And here is the resulting interpolated map
 ```{r}
 chigrocerystores <- leaflet(commareaspoints) %>%
   addProviderTiles(providers$Stamen.Toner) %>%
@@ -150,9 +172,26 @@ chigrocerystores <- leaflet(commareaspoints) %>%
             opacity = 0.7, title = "Estimated Number of \nGrocery Stores \nby Community Area",
             position = "topright")%>%
   addControl('<a href="https://data.cityofchicago.org/Community-Economic-Development/Grocery-Stores-2013/53t8-wyrc">Data source</a>',
-             position = "bottomleft")
+             position = "bottomleft") %>%
+  setMaxBounds( lng1 = -87.940101,
+                lat1 = 41.643919,
+                lng2 = -87.523984,
+                lat2 = 42.098388)
 chigrocerystores
 ```
+
+
+Here, we start to see the concentration of grocery stores as a continuous surface over the city of Chicago
+
+# Final Discussion
+
+Of all of the maps I created, I think the chloropleth map is both the most informative and most appropriate for the data I used as viewers can see exact information of the number of grocery stores by community area. Those nuances between each community areas became lost as I created both the centroid point and interpolated map. While the points still maintain information on exact community areas and their grocery store counts, I'm not so sure if it's the most useful map since all of those points are centralized; perhaps the centroid point map would be more useful if the points weren't centralized. And even though it doesn't account for the nuances between community areas, I do think however that the interpolated map makes for an interesting map that could be used in situations where someone wanted a quick and generalized understanding of the concentration of grocery stores across the city. If several of these interpolated maps were created, then it'd be best for tracking trends overtime (i.e. if more grocery stores were opened in a community area or if some went out of business). Based on these observations, I think the chloropleth map is the best map to use.
+
+
+
+
+
+
 
 ```{r}
 saveWidget(chigrocerystores, file = "chigrocerystores.html")
